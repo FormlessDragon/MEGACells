@@ -32,7 +32,6 @@ import ae2.items.storage.StorageTier;
 import com.gripe.megacells.MEGACells;
 import com.gripe.megacells.item.cell.BulkCellItem;
 import com.gripe.megacells.item.cell.MEGAPortableCell;
-import com.gripe.megacells.item.cell.PortableCellWorkbenchItem;
 import com.gripe.megacells.item.part.CellDockPart;
 import com.gripe.megacells.item.part.DecompressionModulePart;
 
@@ -107,8 +106,6 @@ public final class MEGAItems {
 
     public static final ItemDefinition<PartItem<CellDockPart>> CELL_DOCK =
             part("ME Cell Dock", "cell_dock", CellDockPart.class, CellDockPart::new);
-    public static final ItemDefinition<PortableCellWorkbenchItem> PORTABLE_CELL_WORKBENCH =
-            item("Portable Cell Workbench", "portable_cell_workbench", PortableCellWorkbenchItem::new);
 
     private MEGAItems() {}
 
