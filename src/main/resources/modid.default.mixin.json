@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.example.modid.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "EntityLivingBaseMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

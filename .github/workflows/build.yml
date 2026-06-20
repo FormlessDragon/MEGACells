@@ -1,66 +1,61 @@
-name: Build
+name: Build mod jar
 
 on:
-  pull_request:
-    # Only on branches, not tags/releases
-    branches: ["**"]
-  push:
-    branches: ["*"]
-  release:
-    types: [published]
+  [workflow_dispatch, push]
 
 permissions:
   contents: write
 
-concurrency:
-  group: ci-build-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: 21
-          distribution: 'temurin'
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Generate assets
-        run: ./gradlew runData
-      - name: Check that data was generated
-        run: test -d ./src/generated/resources/.cache
-      - name: Ensure generated data is up-to-date
-        run: |
-          git status
-          if [ -n "$(git status --porcelain)" ]; then exit 1; fi
-      - name: Build release files
-        run: ./gradlew build
-      - name: Publish release files
-        if: ${{ github.event_name == 'release' }}
-        uses: Kir-Antipov/mc-publish@995edadc13559a8b28d0b7e6571229f067ec7659
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: '25'
+        distribution: 'temurin'
+    - uses: gradle/actions/setup-gradle@v6
+      with:
+        gradle-version: 9.4.1
+      name: Set up Gradle
+    - name: Add permission
+      run: chmod +x ./gradlew
+    - name: Set build version
+      run: |
+        previous_tag="$(git describe --tags --abbrev=0 --exclude=dev 2>/dev/null || echo 0.0.0)"
+        short_hash="$(git rev-parse --short HEAD)"
+        echo "MOD_VERSION=${previous_tag}+${short_hash}" >> "$GITHUB_ENV"
+        echo "Build version: ${previous_tag}+${short_hash}"
+    - name: Execute Gradle build
+      run: ./gradlew build -x spotlessCheck -Pmod_version="${MOD_VERSION}"
+        
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v7
+      with:
+        path: build/libs
 
-          curseforge-id: 622112
-          curseforge-token: ${{ secrets.CURSEFORGE_API_KEY }}
+    - name: Update dev tag and ensure dev release exists
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git tag -f dev "${GITHUB_SHA}"
+        git push --force origin refs/tags/dev
+        if ! gh release view dev >/dev/null 2>&1; then
+          gh release create dev --title "dev" --notes "Latest development build artifacts"
+        fi
 
-          modrinth-id: jjuIRIVr
-          modrinth-token: ${{ secrets.MODRINTH_API_KEY }}
-
-          game-versions: 1.21.1
-          loaders: neoforge
-          dependencies: |
-            ae2(required){curseforge:223794}{modrinth:XxWD5pD3}
-            appmek(optional){curseforge:574300}{modrinth:IiATswDj}
-            ae2wtlib(optional){curseforge:459929}{modrinth:pNabrMMw}
-            arseng(optional){curseforge:905641}{modrinth:IJI3QuK8}
-            appflux(optional){curseforge:965012}
-            appex(optional){curseforge:1157608}{modrinth:yKwUnZCV}
-            appbot(optional){curseforge:610632}{modrinth:545hUrw9}
-            appliede(optional){curseforge:1009940}{modrinth:SyKS54UY}
-            appliedsoul(optional){curseforge:1337114}
+    - name: Replace dev release assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        mapfile -t assets < <(gh release view dev --json assets --jq '.assets[].name')
+        for asset in "${assets[@]}"; do
+          gh release delete-asset dev "$asset" --yes
+        done
+        gh release upload dev build/libs/* --clobber

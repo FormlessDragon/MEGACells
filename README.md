@@ -1,53 +1,78 @@
-<h2 align="center">
+# CleanroomModTemplate
+Mod development template for Cleanroom, uses a custom [Unimined fork](https://github.com/kappa-maintainer/Unimined) ([original](https://github.com/unimined/Unimined))
 
-  [![MEGA Cells][logo]][this]
-  <br>
-  ME Greater Accumulation: For when kilobytes just won't do.
+### WARNING: Custom Unimined Fork
+May have issues, report here or [here](https://github.com/kappa-maintainer/Unimined) when you encountered impossible field names or impossible Scala compiler errors. 
 
-  [![CurseForge Total Downloads][badge_curseforge]][curseforge]
-  [![Modrinth Total Downloads][badge_modrinth]][modrinth]
+## DOs and DON'Ts
+### Choose Branch
+Choose mixin branch if you want to use Mixin.
 
-</h2>
-<div align="center">
-  <img src="https://raw.githubusercontent.com/62832/MEGACells/1.20/img/scr_cpus.png" alt="Crafting CPUs screenshot" width=360>
-  <img src="https://raw.githubusercontent.com/62832/MEGACells/1.20/img/scr_cells.png" alt="Storage cells screenshot" width=360>
-</div>
-<br>
+Use scala and kotlin branch if you want to use those languages. 
 
-## ![About][header_about]
-MEGA Cells is an add-on for [Applied Energistics 2][ae2] providing higher tiers of storage, ranging in capacity from 1M to as high as 256M, similarly to add-ons of old such as Extra Cells 2 and its successors.
+There are 4 branches available:
+- main
+- mixin
+- scala
+- kotlin
 
-Unlike conventional add-ons in the same vein, MEGA does things quite differently, featuring its own dedicated progression line and components to further augment and challenge existing AE2 players' set-ups, while emphasising a distinct visual style with jet-black colour schemes.
+If you want to use non-main branches, after clicked *Create a new repository* under *Use this template*, check the *Include all branches* checkbox.
 
-## ![Features][header_features]
-- **1M - 256M** item and fluid cells (standard + portable)
-- MEGA **Crafting CPUs** with bespoke all-black crafting units: 1M - 256M storage, 4-threaded co-processing unit and matching monitor
-- Integration with multiple other AE2 add-ons such as [Applied Mekanistics][appmek] (1-256M chemical cells) and [Applied Botanics][appbot] (1-256M mana cells)
-- **MEGA Bulk Item Storage Cell**: Designed for infinite storage of a single item type
-- **Bulk Compression**: Automatic conversion between ingots, nuggets and blocks for bulk item cell storage, with full support for auto-crafting via the **Decompression Module**
-- **MEGA Pattern Provider**: Double-capacity storage for processing patterns
-- **Superdense Energy Cell** and **Greater Energy Card**: Increased energy storage for AE networks and portable devices
+### Running Client or Server
+If you are using IntelliJ, **DO NOT** use the `Minecraft Client` configure with a blue icon. Just use the `2. Run Client` Gradle task.
 
-...and more still to come.
+### Adding Mod Dependencies
+You can find dependencies block in `gradle/scripts/dependencies.gradle`.
 
-## ![License][header_license]
-All code is licensed under [LGPLv3][lgpl-v3], in adherence to the same license used by Applied Energistics 2 and with some code borrowed from AE2 itself.
-All assets are licensed under [CC BY-NC-SA 3.0][by-nc-sa-3.0], in adherence to the same license used by AE2 and with most deriving from AE2's own assets.
+No more `rfg.deobf()` or `fg.deobf`. You **MUST** add mods by using `modImplementation` or `modRuntimeOnly`, or the game will crash when running.
 
-<!-- Images -->
-[logo]: https://raw.githubusercontent.com/62832/MEGACells/1.20/img/MEGACELLS.png
-[badge_curseforge]: https://img.shields.io/badge/dynamic/json?color=e04e14&label=CurseForge&style=for-the-badge&query=downloads.total&url=https%3A%2F%2Fapi.cfwidget.com%2F622112&logo=curseforge
-[badge_modrinth]: https://img.shields.io/modrinth/dt/jjuIRIVr?color=5da545&label=Modrinth&style=for-the-badge&logo=modrinth
-[header_about]: https://raw.githubusercontent.com/62832/MEGACells/1.20/img/header_about.png
-[header_features]: https://raw.githubusercontent.com/62832/MEGACells/1.20/img/header_features.png
-[header_license]: https://raw.githubusercontent.com/62832/MEGACells/1.20/img/header_license.png
+### Non-Mod Dependencies
+Two new configuration types `contain` and `shadow` are available, check more details in `dependencies.gradle`.
 
-<!-- Links -->
-[this]: https://github.com/62832/MEGACells
-[curseforge]: https://www.curseforge.com/minecraft/mc-mods/mega-cells
-[modrinth]: https://modrinth.com/mod/mega
-[ae2]: https://github.com/AppliedEnergistics/Applied-Energistics-2
-[appmek]: https://github.com/AppliedEnergistics/Applied-Mekanistics
-[appbot]: https://github.com/ramidzkh/Applied-Botanics
-[lgpl-v3]: https://www.gnu.org/licenses/lgpl-3.0.en.html
-[by-nc-sa-3.0]: https://creativecommons.org/licenses/by-nc-sa/3.0/
+### gradle.properties
+Edit gradle.properties and set your modid, mod version, mod name, package, etc.
+
+If you are writing a coremod, remember to set related settings to true.
+
+### Reference Class
+There will be a `Reference` class under your top package.
+
+This is used to store mod version so you can fill it to `@Mod` annotation.
+
+You should change its location to fit your new package name.
+
+You can find its template under `src/main/java-templates`.
+
+### Mixin
+1. Rename json config file to include your modid. You will need one json per phase (`PRE_INIT`, `DEFAULT`, `MOD`) 
+2. Add your mixin classes there.
+3. Use `IMixinConfigPlugin` to control if certain mixin should be enabled. You can call `Loader.isModLoaded()` for `MOD` phase mixins.
+4. Don't worry about refmap, Unimined will handle it automatically. You can still `disableRefmap()` manually though
+
+### Access Transformer
+You **MUST** write AT file in MCP name. It will be remapped back to SRG name in artifact jar.
+
+Rename AT file name to your modid before using it. There's an example entry in AT file, remove it if you want to use AT.
+
+### Vanilla Source Code with Comments
+Run `genSources` task in gradle. If it didn't work, run again until a file with `-sources.jar` suffix appeared.
+
+If you want to `find usage` from vanilla like RFG, just change the scope in IntelliJ settings.
+
+### GitHub Action
+This template comes with three workflows.
+
+`build.yml` will build and upload artifact for every commit. Useful when you want to provide test builds for debugging.
+
+`release.yml` will make a GitHub release if you pushed a git tag.
+
+`release-to-cf-mr.yml` can publish your mod to CurseForge and/or Modrinth.
+
+You need to fill in your project IDs and configure your tokens in GitHub repository first.
+
+By default, you will need to manually trigger the workflow in web page, but you can also enable tag triggering by merging the third yml into `release.yml`.
+
+### Credit
+Thanks @Karnatour for fixing shadow plugin
+
+Thanks @ghostflyby for making kotlin branch
