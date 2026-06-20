@@ -18,6 +18,10 @@ repositories {
         name = 'Modrinth'
         url = 'https://api.modrinth.com/maven'
     }
+    maven {
+        name = "Jitpack"
+        url = uri("https://jitpack.io")
+    }
     mavenCentral()
     mavenLocal() // Must be last for caching to work
 }

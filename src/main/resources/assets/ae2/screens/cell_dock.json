@@ -1,0 +1,14 @@
+{
+  "includes": ["me_chest.json"],
+  "text": {
+    "dialog_title": {
+      "text": {
+        "translate": "item.megacells.cell_dock.name"
+      },
+      "position": {
+        "left": 8,
+        "top": 6
+      }
+    }
+  }
+}

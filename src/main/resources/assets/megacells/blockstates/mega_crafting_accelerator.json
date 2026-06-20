@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "megacells:crafting/accelerator"
+    },
+    "formed=true": {
+      "model": "megacells:crafting/accelerator_formed"
+    }
+  }
+}

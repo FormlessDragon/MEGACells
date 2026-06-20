@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "formed=false,powered=false": {
+      "model": "megacells:crafting/16m_storage"
+    },
+    "formed=false,powered=true": {
+      "model": "megacells:crafting/16m_storage"
+    },
+    "formed=true,powered=false": {
+      "model": "megacells:crafting/16m_storage_formed"
+    },
+    "formed=true,powered=true": {
+      "model": "megacells:crafting/16m_storage_formed"
+    },
+    "inventory": {
+      "model": "megacells:item/16m_crafting_storage"
+    }
+  }
+}

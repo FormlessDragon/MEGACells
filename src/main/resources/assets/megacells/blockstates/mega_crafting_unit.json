@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "formed=false": {
+      "model": "megacells:crafting/unit"
+    },
+    "formed=true": {
+      "model": "megacells:crafting/unit_formed"
+    }
+  }
+}
