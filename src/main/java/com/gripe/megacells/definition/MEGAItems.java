@@ -5,6 +5,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.item.Item;
 import net.minecraftforge.client.model.ModelLoader;
@@ -35,7 +38,12 @@ import com.gripe.megacells.item.cell.MEGAPortableCell;
 import com.gripe.megacells.item.part.CellDockPart;
 import com.gripe.megacells.item.part.DecompressionModulePart;
 
+import static com.gripe.megacells.definition.MEGAStorageTiers.*;
+
+@SuppressWarnings("unused")
 public final class MEGAItems {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MEGAItems.class);
+
     private static final List<ItemDefinition<?>> ITEMS = new ArrayList<>();
     private static final List<CellDefinition> CELLS = new ArrayList<>();
 
@@ -61,12 +69,6 @@ public final class MEGAItems {
     public static final ItemDefinition<StorageComponentItem> CELL_COMPONENT_16M = component(16);
     public static final ItemDefinition<StorageComponentItem> CELL_COMPONENT_64M = component(64);
     public static final ItemDefinition<StorageComponentItem> CELL_COMPONENT_256M = component(256);
-
-    public static final StorageTier TIER_1M = tier(6, "1m", CELL_COMPONENT_1M);
-    public static final StorageTier TIER_4M = tier(7, "4m", CELL_COMPONENT_4M);
-    public static final StorageTier TIER_16M = tier(8, "16m", CELL_COMPONENT_16M);
-    public static final StorageTier TIER_64M = tier(9, "64m", CELL_COMPONENT_64M);
-    public static final StorageTier TIER_256M = tier(10, "256m", CELL_COMPONENT_256M);
 
     public static final ItemDefinition<BasicStorageCell> ITEM_CELL_1M = itemCell(TIER_1M);
     public static final ItemDefinition<BasicStorageCell> ITEM_CELL_4M = itemCell(TIER_4M);
@@ -160,7 +162,7 @@ public final class MEGAItems {
                 tier.namePrefix().toUpperCase() + " MEGA Item Storage Cell",
                 "item_storage_cell_" + tier.namePrefix(),
                 () -> new BasicStorageCell(tier.idleDrain(), tier.bytes() / 1024, tier.bytes() / 128, 63, AEKeyType.items()));
-        CELLS.add(new CellDefinition(cell, tier, AEKeyType.items(), false));
+        CELLS.add(new CellDefinition(cell, tier, CellModelType.fromKeyType(AEKeyType.items()), false));
         return cell;
     }
 
@@ -169,7 +171,7 @@ public final class MEGAItems {
                 tier.namePrefix().toUpperCase() + " MEGA Fluid Storage Cell",
                 "fluid_storage_cell_" + tier.namePrefix(),
                 () -> new BasicStorageCell(tier.idleDrain(), tier.bytes() / 1024, tier.bytes() / 128, 18, AEKeyType.fluids()));
-        CELLS.add(new CellDefinition(cell, tier, AEKeyType.fluids(), false));
+        CELLS.add(new CellDefinition(cell, tier, CellModelType.fromKeyType(AEKeyType.fluids()), false));
         return cell;
     }
 
@@ -178,7 +180,7 @@ public final class MEGAItems {
                 tier.namePrefix().toUpperCase() + " Portable Item Cell",
                 "portable_item_cell_" + tier.namePrefix(),
                 () -> new MEGAPortableCell(tier, AEKeyType.items(), GuiIds.GuiKey.PORTABLE_ITEM_CELL, 0x80caff));
-        CELLS.add(new CellDefinition(cell, tier, AEKeyType.items(), true));
+        CELLS.add(new CellDefinition(cell, tier, CellModelType.fromKeyType(AEKeyType.items()), true));
         return cell;
     }
 
@@ -187,7 +189,7 @@ public final class MEGAItems {
                 tier.namePrefix().toUpperCase() + " Portable Fluid Cell",
                 "portable_fluid_cell_" + tier.namePrefix(),
                 () -> new MEGAPortableCell(tier, AEKeyType.fluids(), GuiIds.GuiKey.PORTABLE_FLUID_CELL, 0x80caff));
-        CELLS.add(new CellDefinition(cell, tier, AEKeyType.fluids(), true));
+        CELLS.add(new CellDefinition(cell, tier, CellModelType.fromKeyType(AEKeyType.fluids()), true));
         return cell;
     }
 
@@ -220,5 +222,42 @@ public final class MEGAItems {
         }
     }
 
-    public record CellDefinition(ItemDefinition<?> item, StorageTier tier, AEKeyType keyType, boolean portable) {}
+    public enum CellModelType {
+        ITEM(AEKeyType.items(), "item"),
+        FLUID(AEKeyType.fluids(), "fluid");
+
+        private final AEKeyType keyType;
+        private final String driveModelSuffix;
+
+        CellModelType(AEKeyType keyType, String driveModelSuffix) {
+            this.keyType = keyType;
+            this.driveModelSuffix = driveModelSuffix;
+        }
+
+        public static CellModelType fromKeyType(AEKeyType keyType) {
+            for (var modelType : values()) {
+                if (modelType.keyType == keyType) {
+                    return modelType;
+                }
+            }
+
+            var keyTypeId = keyType == null ? "<null>" : keyType.getId().toString();
+            LOGGER.error("Unsupported storage cell AE key type for MEGA drive cell model: {}", keyTypeId);
+            throw new IllegalArgumentException("Unsupported storage cell AE key type for MEGA drive cell model: " + keyTypeId);
+        }
+
+        public AEKeyType keyType() {
+            return keyType;
+        }
+
+        public String driveModelSuffix() {
+            return driveModelSuffix;
+        }
+    }
+
+    public record CellDefinition(ItemDefinition<?> item, StorageTier tier, CellModelType modelType, boolean portable) {
+        public AEKeyType keyType() {
+            return modelType.keyType();
+        }
+    }
 }

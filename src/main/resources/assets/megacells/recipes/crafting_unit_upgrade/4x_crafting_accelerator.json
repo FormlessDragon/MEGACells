@@ -1,0 +1,6 @@
+{
+  "type": "ae2:crafting_unit_transform",
+  "base_block": "ae2:crafting_unit",
+  "upgrade_item": "megacells:accumulation_processor",
+  "upgraded_block": "ae2:4x_crafting_accelerator"
+}

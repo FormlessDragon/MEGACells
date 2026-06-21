@@ -1,16 +1,5 @@
 package com.gripe.megacells.item.cell;
 
-import java.math.BigInteger;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.text.ITextComponent;
-
 import ae2.api.config.Actionable;
 import ae2.api.crafting.IPatternDetails;
 import ae2.api.networking.security.IActionSource;
@@ -20,11 +9,23 @@ import ae2.api.stacks.KeyCounter;
 import ae2.api.storage.cells.CellState;
 import ae2.api.storage.cells.ISaveProvider;
 import ae2.api.storage.cells.StorageCell;
-
 import com.gripe.megacells.misc.CompressionChain;
 import com.gripe.megacells.misc.CompressionService;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.text.ITextComponent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
+import java.math.BigInteger;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class BulkCellInventory implements StorageCell {
+    private static final Logger LOGGER = LoggerFactory.getLogger(BulkCellInventory.class);
+
     private static final String TAG_ROOT = "MEGABulkCell";
     private static final String TAG_ITEM = "BulkCellItem";
     private static final String TAG_UNIT_COUNT = "BulkCellUnitCount";
@@ -33,11 +34,9 @@ public class BulkCellInventory implements StorageCell {
 
     private final ISaveProvider container;
     private final ItemStack stack;
-
-    private AEItemKey storedItem;
     private final AEItemKey filterItem;
-
     private final boolean compressionEnabled;
+    private AEItemKey storedItem;
     private CompressionChain compressionChain;
     private BigInteger unitCount;
     private BigInteger unitFactor;
@@ -82,6 +81,77 @@ public class BulkCellInventory implements StorageCell {
         compressionCutoff = recordedCutoff < 0 ? maxCutoff : Math.min(recordedCutoff, maxCutoff);
 
         compressedStacks = compressionChain.initStacks(unitCount, compressionCutoff, determiningItem);
+    }
+
+    @Nullable
+    private static NBTTagCompound getBulkTag(ItemStack stack, boolean create) {
+        if (stack.isEmpty()) {
+            return null;
+        }
+
+        NBTTagCompound root = stack.getTagCompound();
+
+        if (root == null) {
+            if (!create) {
+                return null;
+            }
+
+            root = new NBTTagCompound();
+            stack.setTagCompound(root);
+        }
+
+        if (!root.hasKey(TAG_ROOT, 10)) {
+            if (!create) {
+                return null;
+            }
+
+            root.setTag(TAG_ROOT, new NBTTagCompound());
+        }
+
+        return root.getCompoundTag(TAG_ROOT);
+    }
+
+    private static void removeBulkTag(ItemStack stack) {
+        NBTTagCompound root = stack.getTagCompound();
+
+        if (root == null) {
+            return;
+        }
+
+        root.removeTag(TAG_ROOT);
+
+        if (root.isEmpty()) {
+            stack.setTagCompound(null);
+        }
+    }
+
+    @Nullable
+    private static AEItemKey readItemKey(@Nullable NBTTagCompound data) {
+        if (data == null || !data.hasKey(TAG_ITEM, 10)) {
+            return null;
+        }
+
+        AEKey key = AEKey.fromTagGeneric(data.getCompoundTag(TAG_ITEM));
+        return key instanceof AEItemKey ? (AEItemKey) key : null;
+    }
+
+    private static BigInteger readBigInteger(@Nullable NBTTagCompound data, String key, BigInteger fallback) {
+        if (data == null || !data.hasKey(key, 8)) {
+            return fallback;
+        }
+
+        String value = data.getString(key);
+
+        try {
+            return new BigInteger(value);
+        } catch (NumberFormatException e) {
+            LOGGER.warn("Ignoring invalid bulk cell integer tag {}={}", key, value, e);
+            return fallback;
+        }
+    }
+
+    private static void writeBigInteger(NBTTagCompound data, String key, BigInteger value) {
+        data.setString(key, value.toString());
     }
 
     @Override
@@ -163,11 +233,9 @@ public class BulkCellInventory implements StorageCell {
 
     @Override
     public long insert(AEKey what, long amount, Actionable mode, IActionSource source) {
-        if (amount == 0 || !(what instanceof AEItemKey)) {
+        if (amount == 0 || !(what instanceof AEItemKey item)) {
             return 0;
         }
-
-        AEItemKey item = (AEItemKey) what;
 
         if (isFilterMismatched()) {
             return 0;
@@ -195,11 +263,9 @@ public class BulkCellInventory implements StorageCell {
 
     @Override
     public long extract(AEKey what, long amount, Actionable mode, IActionSource source) {
-        if (storedItem == null || unitCount.signum() < 1 || !(what instanceof AEItemKey)) {
+        if (storedItem == null || unitCount.signum() < 1 || !(what instanceof AEItemKey item)) {
             return 0;
         }
-
-        AEItemKey item = (AEItemKey) what;
 
         if (!compressionChain.containsVariant(item) && !item.equals(storedItem)) {
             return 0;
@@ -331,7 +397,7 @@ public class BulkCellInventory implements StorageCell {
     @Override
     public boolean isPreferredStorageFor(AEKey what, IActionSource source) {
         return what instanceof AEItemKey
-                && (what.equals(storedItem) || what.equals(filterItem) || compressionChain.containsVariant((AEItemKey) what));
+            && (what.equals(storedItem) || what.equals(filterItem) || compressionChain.containsVariant((AEItemKey) what));
     }
 
     @Override
@@ -342,73 +408,5 @@ public class BulkCellInventory implements StorageCell {
     @Override
     public ITextComponent getDescription() {
         return stack.getTextComponent();
-    }
-
-    @Nullable
-    private static NBTTagCompound getBulkTag(ItemStack stack, boolean create) {
-        if (stack.isEmpty()) {
-            return null;
-        }
-
-        NBTTagCompound root = stack.getTagCompound();
-
-        if (root == null) {
-            if (!create) {
-                return null;
-            }
-
-            root = new NBTTagCompound();
-            stack.setTagCompound(root);
-        }
-
-        if (!root.hasKey(TAG_ROOT, 10)) {
-            if (!create) {
-                return null;
-            }
-
-            root.setTag(TAG_ROOT, new NBTTagCompound());
-        }
-
-        return root.getCompoundTag(TAG_ROOT);
-    }
-
-    private static void removeBulkTag(ItemStack stack) {
-        NBTTagCompound root = stack.getTagCompound();
-
-        if (root == null) {
-            return;
-        }
-
-        root.removeTag(TAG_ROOT);
-
-        if (root.isEmpty()) {
-            stack.setTagCompound(null);
-        }
-    }
-
-    @Nullable
-    private static AEItemKey readItemKey(@Nullable NBTTagCompound data) {
-        if (data == null || !data.hasKey(TAG_ITEM, 10)) {
-            return null;
-        }
-
-        AEKey key = AEKey.fromTagGeneric(data.getCompoundTag(TAG_ITEM));
-        return key instanceof AEItemKey ? (AEItemKey) key : null;
-    }
-
-    private static BigInteger readBigInteger(@Nullable NBTTagCompound data, String key, BigInteger fallback) {
-        if (data == null || !data.hasKey(key, 8)) {
-            return fallback;
-        }
-
-        try {
-            return new BigInteger(data.getString(key));
-        } catch (NumberFormatException ignored) {
-            return fallback;
-        }
-    }
-
-    private static void writeBigInteger(NBTTagCompound data, String key, BigInteger value) {
-        data.setString(key, value.toString());
     }
 }

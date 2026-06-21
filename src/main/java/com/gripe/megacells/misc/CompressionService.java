@@ -1,5 +1,19 @@
 package com.gripe.megacells.misc;
 
+import ae2.api.networking.GridServices;
+import ae2.api.stacks.AEItemKey;
+import com.gripe.megacells.item.cell.BulkCellItem;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.IRecipe;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,24 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
-
-import javax.annotation.Nullable;
-
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import net.minecraft.init.Items;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipe;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
-
-import ae2.api.networking.GridServices;
-import ae2.api.stacks.AEItemKey;
-
-import com.gripe.megacells.item.cell.BulkCellItem;
 
 public class CompressionService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CompressionService.class);
@@ -116,28 +112,28 @@ public class CompressionService {
         int initialOverrideCount = overrides.size();
 
         Comparator<IRecipe> ingredientSize =
-                Comparator.comparingInt(r -> firstIngredient(r).getMatchingStacks().length);
+            Comparator.comparingInt(r -> firstIngredient(r).getMatchingStacks().length);
         compressed.sort(ingredientSize);
         decompressed.sort(ingredientSize);
 
         while (!compressed.isEmpty()) {
-            IRecipe recipe = compressed.remove(0);
+            IRecipe recipe = compressed.removeFirst();
             ItemStack base = recipe.getRecipeOutput().copy();
             removeByOutput(decompressed, base);
             chains.add(generateChain(base, compressed, decompressed, overrides));
         }
 
         LOGGER.info(
-                "Initialised bulk compression. Gathered {} compression chains, with {} overrides.",
-                chains.size(),
-                initialOverrideCount - overrides.size());
+            "Initialised bulk compression. Gathered {} compression chains, with {} overrides.",
+            chains.size(),
+            initialOverrideCount - overrides.size());
     }
 
     private static CompressionChain generateChain(
-            ItemStack baseVariant,
-            List<IRecipe> compressed,
-            List<IRecipe> decompressed,
-            List<CompressionOverride> overrides) {
+        ItemStack baseVariant,
+        List<IRecipe> compressed,
+        List<IRecipe> decompressed,
+        List<CompressionOverride> overrides) {
         List<ItemStack> lowerList = new ArrayList<>();
         lowerList.add(baseVariant);
 
@@ -150,8 +146,8 @@ public class CompressionService {
             if (stackHashes.contains(stackHash(stack))) {
                 if (stack.getCount() != 1) {
                     LOGGER.warn(
-                            "Duplicate lower compression variant detected: {}. Check any recipe involving this item for problems.",
-                            stack);
+                        "Duplicate lower compression variant detected: {}. Check any recipe involving this item for problems.",
+                        stack);
                 }
 
                 break;
@@ -166,16 +162,16 @@ public class CompressionService {
 
         for (int i = lowerList.size(); i > 0; i--) {
             variantList.add(CompressionChain.copyWithCount(
-                    lowerList.get(i - 1),
-                    lowerList.get(i % lowerList.size()).getCount()));
+                lowerList.get(i - 1),
+                lowerList.get(i % lowerList.size()).getCount()));
         }
 
         for (ItemStack higher = getNextVariant(baseVariant, compressed, overrides, true); higher != null; ) {
             if (stackHashes.contains(stackHash(higher))) {
                 if (higher.getCount() != 1) {
                     LOGGER.warn(
-                            "Duplicate higher compression variant detected: {}. Check any recipe involving this item for problems.",
-                            higher);
+                        "Duplicate higher compression variant detected: {}. Check any recipe involving this item for problems.",
+                        higher);
                 }
 
                 break;
@@ -194,7 +190,7 @@ public class CompressionService {
 
     @Nullable
     private static ItemStack getNextVariant(
-            ItemStack item, List<IRecipe> recipes, List<CompressionOverride> overrides, boolean compressed) {
+        ItemStack item, List<IRecipe> recipes, List<CompressionOverride> overrides, boolean compressed) {
         for (Iterator<CompressionOverride> it = overrides.iterator(); it.hasNext(); ) {
             CompressionOverride override = it.next();
 
@@ -217,8 +213,8 @@ public class CompressionService {
                     it.remove();
                     ItemStack output = recipe.getRecipeOutput().copy();
                     return CompressionChain.copyWithCount(
-                            output,
-                            compressed ? ingredientCount(recipe) : output.getCount());
+                        output,
+                        compressed ? ingredientCount(recipe) : output.getCount());
                 }
             }
         }
@@ -245,7 +241,7 @@ public class CompressionService {
             return true;
         }
 
-        ItemStack[] first = ingredients.get(0).getMatchingStacks();
+        ItemStack[] first = ingredients.getFirst().getMatchingStacks();
 
         for (int i = 1; i < ingredients.size(); i++) {
             ItemStack[] stacks = ingredients.get(i).getMatchingStacks();
@@ -265,7 +261,7 @@ public class CompressionService {
     }
 
     private static boolean isIrreversible(
-            IRecipe recipe, List<IRecipe> candidates, List<CompressionOverride> overrides) {
+        IRecipe recipe, List<IRecipe> candidates, List<CompressionOverride> overrides) {
         if (overrideRecipe(recipe, overrides)) {
             return false;
         }
@@ -295,7 +291,7 @@ public class CompressionService {
             }
 
             boolean sameQuantity = candidate.getRecipeOutput().getCount() == ingredientCount(recipe)
-                    && recipe.getRecipeOutput().getCount() == ingredientCount(candidate);
+                && recipe.getRecipeOutput().getCount() == ingredientCount(candidate);
 
             if (compressible && decompressible && sameQuantity) {
                 return false;
@@ -314,7 +310,7 @@ public class CompressionService {
 
         List<net.minecraft.item.crafting.Ingredient> ingredients = nonEmptyIngredients(recipe);
 
-        for (ItemStack input : ingredients.get(0).getMatchingStacks()) {
+        for (ItemStack input : ingredients.getFirst().getMatchingStacks()) {
             Item overridden = overrideVariants.get(input.getItem());
 
             if (overridden == null || overridden != output.getItem()) {
@@ -324,8 +320,8 @@ public class CompressionService {
             boolean decompressed = isDecompressionRecipe(recipe);
             ItemStack larger = (decompressed ? input : output).copy();
             ItemStack smaller = decompressed
-                    ? output.copy()
-                    : CompressionChain.copyWithCount(input, ingredients.size());
+                ? output.copy()
+                : CompressionChain.copyWithCount(input, ingredients.size());
 
             CompressionOverride override = new CompressionOverride(larger, smaller);
             LOGGER.debug("Found bulk compression override: {}", override);
@@ -357,7 +353,7 @@ public class CompressionService {
     }
 
     private static net.minecraft.item.crafting.Ingredient firstIngredient(IRecipe recipe) {
-        return nonEmptyIngredients(recipe).get(0);
+        return nonEmptyIngredients(recipe).getFirst();
     }
 
     private static List<net.minecraft.item.crafting.Ingredient> nonEmptyIngredients(IRecipe recipe) {

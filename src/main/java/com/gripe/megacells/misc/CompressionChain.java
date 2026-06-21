@@ -1,5 +1,14 @@
 package com.gripe.megacells.misc;
 
+import ae2.api.crafting.IPatternDetails;
+import ae2.api.stacks.AEItemKey;
+import com.gripe.megacells.item.cell.BulkCellItem;
+import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.objects.Object2LongLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketBuffer;
+
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Collections;
@@ -7,18 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
-
-import it.unimi.dsi.fastutil.Pair;
-import it.unimi.dsi.fastutil.objects.Object2LongLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
-
-import ae2.api.crafting.IPatternDetails;
-import ae2.api.stacks.AEItemKey;
-
-import com.gripe.megacells.item.cell.BulkCellItem;
 
 public class CompressionChain {
     public static final long STACK_LIMIT = (long) Math.pow(2, 42);
@@ -41,20 +38,41 @@ public class CompressionChain {
         return new CompressionChain(variants);
     }
 
-    public void write(PacketBuffer buffer) {
-        buffer.writeVarInt(variants.size());
-
-        for (ItemStack variant : variants) {
-            buffer.writeItemStack(variant);
-        }
-    }
-
     public static long clamp(BigInteger toClamp, long limit) {
         return toClamp.min(BigInteger.valueOf(limit)).longValue();
     }
 
     private static BigInteger bigCount(ItemStack stack) {
         return BigInteger.valueOf(stack.getCount());
+    }
+
+    static ItemStack copyWithCount(ItemStack stack, int count) {
+        ItemStack copy = stack.copy();
+        copy.setCount(count);
+        return copy;
+    }
+
+    private static <T> Supplier<T> memoize(Supplier<T> supplier) {
+        return new Supplier<>() {
+            private T value;
+
+            @Override
+            public T get() {
+                if (value == null) {
+                    value = supplier.get();
+                }
+
+                return value;
+            }
+        };
+    }
+
+    public void write(PacketBuffer buffer) {
+        buffer.writeVarInt(variants.size());
+
+        for (ItemStack variant : variants) {
+            buffer.writeItemStack(variant);
+        }
     }
 
     public boolean isEmpty() {
@@ -148,27 +166,6 @@ public class CompressionChain {
         }
 
         return stacks;
-    }
-
-    static ItemStack copyWithCount(ItemStack stack, int count) {
-        ItemStack copy = stack.copy();
-        copy.setCount(count);
-        return copy;
-    }
-
-    private static <T> Supplier<T> memoize(Supplier<T> supplier) {
-        return new Supplier<T>() {
-            private T value;
-
-            @Override
-            public T get() {
-                if (value == null) {
-                    value = supplier.get();
-                }
-
-                return value;
-            }
-        };
     }
 
     @Override

@@ -1,0 +1,15 @@
+{
+  "type": "forge:ore_shapeless",
+  "ingredients": [
+    {
+      "item": "ae2:advanced_card"
+    },
+    {
+      "item": "ae2:matter_ball"
+    }
+  ],
+  "result": {
+    "item": "megacells:compression_card",
+    "count": 1
+  }
+}

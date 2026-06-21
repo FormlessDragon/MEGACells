@@ -1,0 +1,27 @@
+{
+  "type": "forge:ore_shaped",
+  "pattern": [
+    "aba",
+    "cdc",
+    "aca"
+  ],
+  "key": {
+    "a": {
+      "type": "forge:ore_dict",
+      "ore": "dustEnderPearl"
+    },
+    "b": {
+      "item": "megacells:accumulation_processor"
+    },
+    "c": {
+      "item": "megacells:cell_component_1m"
+    },
+    "d": {
+      "item": "ae2:quartz_vibrant_glass"
+    }
+  },
+  "result": {
+    "item": "megacells:cell_component_4m",
+    "count": 1
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "type": "forge:ore_shapeless",
+  "ingredients": [
+    {
+      "item": "ae2:advanced_card"
+    },
+    {
+      "item": "megacells:mega_energy_cell"
+    }
+  ],
+  "result": {
+    "item": "megacells:greater_energy_card",
+    "count": 1
+  }
+}

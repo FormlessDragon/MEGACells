@@ -1,0 +1,15 @@
+{
+  "type": "forge:ore_shapeless",
+  "ingredients": [
+    {
+      "item": "megacells:mega_fluid_cell_housing"
+    },
+    {
+      "item": "megacells:cell_component_4m"
+    }
+  ],
+  "result": {
+    "item": "megacells:fluid_storage_cell_4m",
+    "count": 1
+  }
+}

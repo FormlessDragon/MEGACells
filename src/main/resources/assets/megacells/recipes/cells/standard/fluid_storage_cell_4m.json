@@ -1,0 +1,27 @@
+{
+  "type": "forge:ore_shaped",
+  "pattern": [
+    "aba",
+    "bcb",
+    "ddd"
+  ],
+  "key": {
+    "a": {
+      "item": "ae2:quartz_vibrant_glass"
+    },
+    "b": {
+      "item": "ae2:sky_dust"
+    },
+    "c": {
+      "item": "megacells:cell_component_4m"
+    },
+    "d": {
+      "type": "forge:ore_dict",
+      "ore": "ingotSkyBronze"
+    }
+  },
+  "result": {
+    "item": "megacells:fluid_storage_cell_4m",
+    "count": 1
+  }
+}

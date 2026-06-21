@@ -1,17 +1,5 @@
 package com.gripe.megacells.item.cell;
 
-import java.util.List;
-import java.util.Set;
-
-import javax.annotation.Nullable;
-
-import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.world.World;
-
 import ae2.api.config.FuzzyMode;
 import ae2.api.stacks.AEKeyType;
 import ae2.api.storage.StorageCells;
@@ -25,9 +13,18 @@ import ae2.core.localization.Tooltips;
 import ae2.items.AEBaseItem;
 import ae2.items.contents.CellConfig;
 import ae2.util.ConfigInventory;
-
 import com.gripe.megacells.definition.MEGAItems;
 import com.gripe.megacells.definition.MEGATranslations;
+import net.minecraft.client.util.ITooltipFlag;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.world.World;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Set;
 
 public class BulkCellItem extends AEBaseItem implements ICellWorkbenchItem {
     private static final ICellHandler HANDLER = new Handler();
@@ -38,6 +35,23 @@ public class BulkCellItem extends AEBaseItem implements ICellWorkbenchItem {
 
     public static void registerHandler() {
         StorageCells.addCellHandler(HANDLER);
+    }
+
+    private static void addLine(List<String> lines, ITextComponent component) {
+        lines.add(component.getFormattedText());
+    }
+
+    private static void addLine(List<String> lines, ITextComponent component, TextFormatting formatting) {
+        lines.add(formatting + component.getFormattedText());
+    }
+
+    private static ITextComponent withStyle(ITextComponent component, TextFormatting formatting) {
+        component.getStyle().setColor(formatting);
+        return component;
+    }
+
+    public static boolean sameItemAndTag(ItemStack a, ItemStack b) {
+        return ItemStack.areItemsEqual(a, b) && ItemStack.areItemStackTagsEqual(a, b);
     }
 
     @Override
@@ -68,9 +82,9 @@ public class BulkCellItem extends AEBaseItem implements ICellWorkbenchItem {
 
             long quantity = inv.getStoredQuantity();
             addLine(
-                    lines,
-                    MEGATranslations.Quantity.text(
-                            quantity < Long.MAX_VALUE ? Tooltips.ofUnformattedNumber(quantity) : MEGATranslations.ALot.text()));
+                lines,
+                MEGATranslations.Quantity.text(
+                    quantity < Long.MAX_VALUE ? Tooltips.ofUnformattedNumber(quantity) : MEGATranslations.ALot.text()));
         } else {
             addLine(lines, MEGATranslations.Empty.text());
         }
@@ -88,19 +102,19 @@ public class BulkCellItem extends AEBaseItem implements ICellWorkbenchItem {
         }
 
         addLine(
-                lines,
-                MEGATranslations.Compression.text(
-                        inv.isCompressionEnabled()
-                                ? withStyle(MEGATranslations.Enabled.text(), TextFormatting.GREEN)
-                                : withStyle(MEGATranslations.Disabled.text(), TextFormatting.RED)));
+            lines,
+            MEGATranslations.Compression.text(
+                inv.isCompressionEnabled()
+                    ? withStyle(MEGATranslations.Enabled.text(), TextFormatting.GREEN)
+                    : withStyle(MEGATranslations.Disabled.text(), TextFormatting.RED)));
 
         long trace = inv.getTraceUnits();
 
         if (trace > 0) {
             ITextComponent text =
-                    inv.isCompressionEnabled()
-                            ? MEGATranslations.TraceUnits.text(Tooltips.ofUnformattedNumber(trace), inv.getLowestVariant().getTextComponent())
-                            : MEGATranslations.ContainsTraceUnits.text();
+                inv.isCompressionEnabled()
+                    ? MEGATranslations.TraceUnits.text(Tooltips.ofUnformattedNumber(trace), inv.getLowestVariant().getTextComponent())
+                    : MEGATranslations.ContainsTraceUnits.text();
             addLine(lines, text, TextFormatting.YELLOW);
         }
 
@@ -120,23 +134,6 @@ public class BulkCellItem extends AEBaseItem implements ICellWorkbenchItem {
 
     @Override
     public void setFuzzyMode(ItemStack itemStack, FuzzyMode fuzzyMode) {
-    }
-
-    private static void addLine(List<String> lines, ITextComponent component) {
-        lines.add(component.getFormattedText());
-    }
-
-    private static void addLine(List<String> lines, ITextComponent component, TextFormatting formatting) {
-        lines.add(formatting + component.getFormattedText());
-    }
-
-    private static ITextComponent withStyle(ITextComponent component, TextFormatting formatting) {
-        component.getStyle().setColor(formatting);
-        return component;
-    }
-
-    public static boolean sameItemAndTag(ItemStack a, ItemStack b) {
-        return ItemStack.areItemsEqual(a, b) && ItemStack.areItemStackTagsEqual(a, b);
     }
 
     private static class Handler implements ICellHandler {

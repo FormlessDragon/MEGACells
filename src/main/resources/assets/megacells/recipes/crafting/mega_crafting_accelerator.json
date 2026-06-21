@@ -1,0 +1,15 @@
+{
+  "type": "forge:ore_shapeless",
+  "ingredients": [
+    {
+      "item": "megacells:mega_crafting_unit"
+    },
+    {
+      "item": "ae2:concurrent_processor"
+    }
+  ],
+  "result": {
+    "item": "megacells:mega_crafting_accelerator",
+    "count": 1
+  }
+}

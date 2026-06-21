@@ -1,9 +1,15 @@
 {
   "variants": {
-    "formed=false": {
+    "formed=false,powered=false": {
       "model": "megacells:crafting/accelerator"
     },
-    "formed=true": {
+    "formed=false,powered=true": {
+      "model": "megacells:crafting/accelerator"
+    },
+    "formed=true,powered=false": {
+      "model": "megacells:crafting/accelerator_formed"
+    },
+    "formed=true,powered=true": {
       "model": "megacells:crafting/accelerator_formed"
     }
   }

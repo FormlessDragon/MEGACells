@@ -1,26 +1,26 @@
 package com.gripe.megacells.misc;
 
 import net.minecraft.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
-public final class CompressionOverride {
-    private final ItemStack larger;
-    private final ItemStack smaller;
-
+public record CompressionOverride(ItemStack larger, ItemStack smaller) {
     public CompressionOverride(ItemStack larger, ItemStack smaller) {
         this.larger = larger.copy();
         this.smaller = smaller.copy();
     }
 
+    @Override
     public ItemStack larger() {
         return larger.copy();
     }
 
+    @Override
     public ItemStack smaller() {
         return smaller.copy();
     }
 
     @Override
-    public String toString() {
+    public @NonNull String toString() {
         return "CompressionOverride{larger=" + larger + ", smaller=" + smaller + '}';
     }
 }

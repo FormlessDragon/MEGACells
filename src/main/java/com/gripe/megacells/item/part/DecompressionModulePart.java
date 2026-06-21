@@ -1,24 +1,22 @@
 package com.gripe.megacells.item.part;
 
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.Vec3d;
-
 import ae2.api.networking.GridFlags;
 import ae2.api.parts.IPartCollisionHelper;
 import ae2.api.parts.IPartItem;
 import ae2.api.parts.IPartModel;
-import ae2.container.ISubGui;
 import ae2.container.GuiIds;
+import ae2.container.ISubGui;
 import ae2.core.gui.GuiOpener;
 import ae2.helpers.IPriorityHost;
 import ae2.items.parts.PartModels;
 import ae2.parts.AEBasePart;
 import ae2.parts.PartModel;
-
 import com.gripe.megacells.MEGACells;
 import com.gripe.megacells.definition.MEGAItems;
 import com.gripe.megacells.misc.DecompressionService;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.math.Vec3d;
 
 public class DecompressionModulePart extends AEBasePart implements IPriorityHost {
     @PartModels

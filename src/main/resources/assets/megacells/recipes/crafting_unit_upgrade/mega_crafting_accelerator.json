@@ -1,0 +1,6 @@
+{
+  "type": "ae2:crafting_unit_transform",
+  "base_block": "megacells:mega_crafting_unit",
+  "upgrade_item": "ae2:concurrent_processor",
+  "upgraded_block": "megacells:mega_crafting_accelerator"
+}

@@ -1,0 +1,22 @@
+{
+  "type": "ae2:transform",
+  "ingredients": [
+    {
+      "item": "ae2:charged_certus_quartz_crystal"
+    },
+    {
+      "tag": "c:ingots/iron"
+    },
+    {
+      "item": "ae2:sky_stone_block"
+    }
+  ],
+  "result": {
+    "id": "megacells:sky_steel_ingot",
+    "count": 2
+  },
+  "circumstance": {
+    "type": "fluid",
+    "fluid": "lava"
+  }
+}

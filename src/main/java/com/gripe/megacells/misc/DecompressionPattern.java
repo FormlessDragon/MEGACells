@@ -1,18 +1,16 @@
 package com.gripe.megacells.misc;
 
-import java.util.Collections;
-import java.util.List;
-
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.world.World;
-
 import ae2.api.crafting.IPatternDetails;
 import ae2.api.stacks.AEItemKey;
 import ae2.api.stacks.AEKey;
 import ae2.api.stacks.GenericStack;
-
 import com.gripe.megacells.definition.MEGAItems;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.world.World;
+
+import java.util.Collections;
+import java.util.List;
 
 public class DecompressionPattern implements IPatternDetails {
     private static final String TAG_PATTERN = "MEGADecompressionPattern";
@@ -32,6 +30,15 @@ public class DecompressionPattern implements IPatternDetails {
         this.definition = AEItemKey.of(definition);
     }
 
+    private static NBTTagCompound encode(ItemStack from, ItemStack to) {
+        NBTTagCompound root = new NBTTagCompound();
+        NBTTagCompound pattern = new NBTTagCompound();
+        pattern.setTag(TAG_FROM, from.writeToNBT(new NBTTagCompound()));
+        pattern.setTag(TAG_TO, to.writeToNBT(new NBTTagCompound()));
+        root.setTag(TAG_PATTERN, pattern);
+        return root;
+    }
+
     @Override
     public AEItemKey getDefinition() {
         return definition;
@@ -39,7 +46,7 @@ public class DecompressionPattern implements IPatternDetails {
 
     @Override
     public IInput[] getInputs() {
-        return new IInput[] {new Input(from)};
+        return new IInput[]{new Input(from)};
     }
 
     @Override
@@ -57,40 +64,29 @@ public class DecompressionPattern implements IPatternDetails {
         return definition.hashCode();
     }
 
-    private static NBTTagCompound encode(ItemStack from, ItemStack to) {
-        NBTTagCompound root = new NBTTagCompound();
-        NBTTagCompound pattern = new NBTTagCompound();
-        pattern.setTag(TAG_FROM, from.writeToNBT(new NBTTagCompound()));
-        pattern.setTag(TAG_TO, to.writeToNBT(new NBTTagCompound()));
-        root.setTag(TAG_PATTERN, pattern);
-        return root;
-    }
+    private record Input(ItemStack stack) implements IInput {
+            private Input(ItemStack stack) {
+                this.stack = stack.copy();
+            }
 
-    private static class Input implements IInput {
-        private final ItemStack stack;
+            @Override
+            public GenericStack[] possibleInputs() {
+                return new GenericStack[]{new GenericStack(AEItemKey.of(stack), stack.getCount())};
+            }
 
-        private Input(ItemStack stack) {
-            this.stack = stack.copy();
+            @Override
+            public long getMultiplier() {
+                return 1;
+            }
+
+            @Override
+            public boolean isValid(AEKey input, World level) {
+                return input.matches(possibleInputs()[0]);
+            }
+
+            @Override
+            public AEKey getRemainingKey(AEKey template) {
+                return null;
+            }
         }
-
-        @Override
-        public GenericStack[] possibleInputs() {
-            return new GenericStack[] {new GenericStack(AEItemKey.of(stack), stack.getCount())};
-        }
-
-        @Override
-        public long getMultiplier() {
-            return 1;
-        }
-
-        @Override
-        public boolean isValid(AEKey input, World level) {
-            return input.matches(possibleInputs()[0]);
-        }
-
-        @Override
-        public AEKey getRemainingKey(AEKey template) {
-            return null;
-        }
-    }
 }

@@ -1,17 +1,5 @@
 package com.gripe.megacells.misc;
 
-import java.util.Collections;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongMaps;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-
-import net.minecraft.nbt.NBTTagCompound;
-
 import ae2.api.config.Actionable;
 import ae2.api.crafting.IPatternDetails;
 import ae2.api.implementations.blockentities.IChestOrDrive;
@@ -24,9 +12,17 @@ import ae2.api.networking.crafting.ICraftingService;
 import ae2.api.networking.security.IActionSource;
 import ae2.api.stacks.AEKey;
 import ae2.api.stacks.KeyCounter;
-
 import com.gripe.megacells.item.cell.BulkCellInventory;
 import com.gripe.megacells.item.part.DecompressionModulePart;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMaps;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.minecraft.nbt.NBTTagCompound;
+
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 
 public class DecompressionService implements IGridService, IGridServiceProvider, ICraftingProvider {
     private static final String TAG_PATTERN_PRIORITY = "dcp";
@@ -35,9 +31,8 @@ public class DecompressionService implements IGridService, IGridServiceProvider,
     private final List<IPatternDetails> patterns = new ObjectArrayList<>();
 
     private final IGrid grid;
-    private int installedModules;
-
     private final Object2LongMap<AEKey> patternOutputs = new Object2LongOpenHashMap<>();
+    private int installedModules;
     private int patternPriority;
     private boolean priorityLocked;
 
@@ -71,8 +66,8 @@ public class DecompressionService implements IGridService, IGridServiceProvider,
 
     @Override
     public void removeNode(IGridNode node) {
-        if (node.getOwner() instanceof IChestOrDrive) {
-            cellHosts.remove(node.getOwner());
+        if (node.getOwner() instanceof IChestOrDrive c) {
+            cellHosts.remove(c);
         }
 
         if (node.getOwner() instanceof DecompressionModulePart) {
@@ -88,8 +83,8 @@ public class DecompressionService implements IGridService, IGridServiceProvider,
                 AEKey what = output.getKey();
                 long amount = output.getLongValue();
                 long inserted = grid.getStorageService()
-                        .getInventory()
-                        .insert(what, amount, Actionable.MODULATE, IActionSource.empty());
+                                    .getInventory()
+                                    .insert(what, amount, Actionable.MODULATE, IActionSource.empty());
 
                 if (inserted >= amount) {
                     it.remove();
@@ -107,8 +102,7 @@ public class DecompressionService implements IGridService, IGridServiceProvider,
         if (installedModules > 0) {
             for (IChestOrDrive cellHost : cellHosts) {
                 for (int i = 0; i < cellHost.getCellCount(); i++) {
-                    if (cellHost.getOriginalCellInventory(i) instanceof BulkCellInventory) {
-                        BulkCellInventory bulkCell = (BulkCellInventory) cellHost.getOriginalCellInventory(i);
+                    if (cellHost.getOriginalCellInventory(i) instanceof BulkCellInventory bulkCell) {
                         patterns.addAll(bulkCell.getDecompressionPatterns());
                     }
                 }

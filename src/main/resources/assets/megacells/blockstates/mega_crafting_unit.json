@@ -1,9 +1,15 @@
 {
   "variants": {
-    "formed=false": {
+    "formed=false,powered=false": {
       "model": "megacells:crafting/unit"
     },
-    "formed=true": {
+    "formed=false,powered=true": {
+      "model": "megacells:crafting/unit"
+    },
+    "formed=true,powered=false": {
+      "model": "megacells:crafting/unit_formed"
+    },
+    "formed=true,powered=true": {
       "model": "megacells:crafting/unit_formed"
     }
   }

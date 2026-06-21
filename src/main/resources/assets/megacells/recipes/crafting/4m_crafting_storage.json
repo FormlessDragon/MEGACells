@@ -1,0 +1,15 @@
+{
+  "type": "forge:ore_shapeless",
+  "ingredients": [
+    {
+      "item": "megacells:mega_crafting_unit"
+    },
+    {
+      "item": "megacells:cell_component_4m"
+    }
+  ],
+  "result": {
+    "item": "megacells:4m_crafting_storage",
+    "count": 1
+  }
+}

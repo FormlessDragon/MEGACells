@@ -1,0 +1,26 @@
+{
+  "type": "forge:ore_shaped",
+  "pattern": [
+    "aba",
+    "bcb",
+    "ddd"
+  ],
+  "key": {
+    "a": {
+      "item": "ae2:quartz_vibrant_glass"
+    },
+    "b": {
+      "item": "ae2:sky_dust"
+    },
+    "c": {
+      "item": "megacells:bulk_cell_component"
+    },
+    "d": {
+      "item": "megacells:sky_steel_ingot"
+    }
+  },
+  "result": {
+    "item": "megacells:bulk_item_cell",
+    "count": 1
+  }
+}

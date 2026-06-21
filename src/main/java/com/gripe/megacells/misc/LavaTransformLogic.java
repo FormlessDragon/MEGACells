@@ -1,8 +1,6 @@
 package com.gripe.megacells.misc;
 
-import java.util.HashSet;
-import java.util.Set;
-
+import ae2.recipes.AERecipeTypes;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.item.Item;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -10,12 +8,14 @@ import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-import ae2.recipes.AERecipeTypes;
+import java.util.HashSet;
+import java.util.Set;
 
 public final class LavaTransformLogic {
     private static final Set<Item> lavaCache = new HashSet<>();
 
-    private LavaTransformLogic() {}
+    private LavaTransformLogic() {
+    }
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {

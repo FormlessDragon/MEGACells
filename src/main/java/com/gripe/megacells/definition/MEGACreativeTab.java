@@ -16,5 +16,6 @@ public final class MEGACreativeTab {
         }
     };
 
-    private MEGACreativeTab() {}
+    private MEGACreativeTab() {
+    }
 }

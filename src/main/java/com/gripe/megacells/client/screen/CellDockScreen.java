@@ -1,12 +1,10 @@
 package com.gripe.megacells.client.screen;
 
-import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.util.text.ITextComponent;
-
 import ae2.client.gui.AEBaseGui;
 import ae2.client.gui.style.GuiStyle;
-
 import com.gripe.megacells.menu.CellDockMenu;
+import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.util.text.ITextComponent;
 
 public class CellDockScreen extends AEBaseGui<CellDockMenu> {
     private final ITextComponent title;

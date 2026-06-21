@@ -1,0 +1,26 @@
+{
+  "type": "forge:ore_shaped",
+  "pattern": [
+    "aba",
+    "cdc",
+    "aca"
+  ],
+  "key": {
+    "a": {
+      "item": "ae2:sky_dust"
+    },
+    "b": {
+      "item": "megacells:accumulation_processor"
+    },
+    "c": {
+      "item": "ae2:cell_component_256k"
+    },
+    "d": {
+      "item": "ae2:quartz_vibrant_glass"
+    }
+  },
+  "result": {
+    "item": "megacells:cell_component_1m",
+    "count": 1
+  }
+}

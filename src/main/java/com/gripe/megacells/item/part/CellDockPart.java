@@ -1,21 +1,5 @@
 package com.gripe.megacells.item.part;
 
-import java.util.List;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Items;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
-
 import ae2.api.implementations.blockentities.IChestOrDrive;
 import ae2.api.inventories.InternalInventory;
 import ae2.api.networking.GridFlags;
@@ -30,7 +14,6 @@ import ae2.api.storage.StorageCells;
 import ae2.api.storage.cells.CellState;
 import ae2.api.storage.cells.StorageCell;
 import ae2.container.ISubGui;
-import ae2.core.gui.GuiOpener;
 import ae2.helpers.IPriorityHost;
 import ae2.items.parts.PartModels;
 import ae2.me.storage.DriveWatcher;
@@ -41,13 +24,31 @@ import ae2.util.inv.AppEngCellInventory;
 import ae2.util.inv.AppEngInternalInventory;
 import ae2.util.inv.InternalInventoryHost;
 import ae2.util.inv.filter.IAEItemFilter;
-
 import com.gripe.megacells.MEGACells;
 import com.gripe.megacells.definition.MEGAItems;
 import com.gripe.megacells.misc.MEGAGuiHandler;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 public class CellDockPart extends AEBasePart
-        implements InternalInventoryHost, IChestOrDrive, IStorageProvider, IPriorityHost {
+    implements InternalInventoryHost, IChestOrDrive, IStorageProvider, IPriorityHost {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CellDockPart.class);
+
     @PartModels
     private static final IPartModel MODEL = new PartModel(MEGACells.makeId("part/cell_dock"));
 
@@ -64,9 +65,9 @@ public class CellDockPart extends AEBasePart
     public CellDockPart(IPartItem<?> partItem) {
         super(partItem);
         getMainNode()
-                .setIdlePowerUsage(0.5)
-                .setFlags(GridFlags.REQUIRE_CHANNEL)
-                .addService(IStorageProvider.class, this);
+            .setIdlePowerUsage(0.5)
+            .setFlags(GridFlags.REQUIRE_CHANNEL)
+            .addService(IStorageProvider.class, this);
         cellInventory.setFilter(new Filter());
     }
 
@@ -107,8 +108,8 @@ public class CellDockPart extends AEBasePart
     public void writeToStream(PacketBuffer data) {
         super.writeToStream(data);
         ResourceLocation cellId = getCell().isEmpty()
-                ? ForgeRegistries.ITEMS.getKey(Items.AIR)
-                : ForgeRegistries.ITEMS.getKey(getCell().getItem());
+            ? ForgeRegistries.ITEMS.getKey(Items.AIR)
+            : ForgeRegistries.ITEMS.getKey(getCell().getItem());
         data.writeResourceLocation(cellId);
         data.writeEnumValue(clientCellState = getCellStatus(0));
         data.writeByte(spin);
@@ -120,9 +121,12 @@ public class CellDockPart extends AEBasePart
         Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(data.getString("cellId")));
         clientCell = item == null ? Items.AIR : item;
 
+        String cellStatus = data.getString("cellStatus");
+
         try {
-            clientCellState = CellState.valueOf(data.getString("cellStatus"));
-        } catch (IllegalArgumentException ignored) {
+            clientCellState = CellState.valueOf(cellStatus);
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("Ignoring invalid cell dock visual state {}", cellStatus, e);
             clientCellState = CellState.ABSENT;
         }
 
@@ -133,8 +137,8 @@ public class CellDockPart extends AEBasePart
     public void writeVisualStateToNBT(NBTTagCompound data) {
         super.writeVisualStateToNBT(data);
         ResourceLocation cellId = getCell().isEmpty()
-                ? ForgeRegistries.ITEMS.getKey(Items.AIR)
-                : ForgeRegistries.ITEMS.getKey(getCell().getItem());
+            ? ForgeRegistries.ITEMS.getKey(Items.AIR)
+            : ForgeRegistries.ITEMS.getKey(getCell().getItem());
         data.setString("cellId", cellId.toString());
         data.setString("cellStatus", getCellStatus(0).name());
         data.setByte("spin", spin);
@@ -348,12 +352,12 @@ public class CellDockPart extends AEBasePart
     private void openMainGui(EntityPlayer player) {
         BlockPos pos = getTileEntity().getPos();
         player.openGui(
-                MEGACells.instance,
-                MEGAGuiHandler.CELL_DOCK,
-                getLevel(),
-                MEGAGuiHandler.encodeX(pos.getX(), getSide()),
-                pos.getY(),
-                pos.getZ());
+            MEGACells.instance,
+            MEGAGuiHandler.CELL_DOCK,
+            getLevel(),
+            MEGAGuiHandler.encodeX(pos.getX(), getSide()),
+            pos.getY(),
+            pos.getZ());
     }
 
     private static class Filter implements IAEItemFilter {

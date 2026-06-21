@@ -1,0 +1,33 @@
+{
+  "type": "forge:ore_shaped",
+  "pattern": [
+    "IAI",
+    "C#E",
+    "ILI"
+  ],
+  "key": {
+    "I": {
+      "type": "forge:ore_dict",
+      "ore": "ingotIron"
+    },
+    "A": {
+      "item": "megacells:accumulation_processor"
+    },
+    "C": {
+      "item": "ae2:calculation_processor"
+    },
+    "#": {
+      "item": "megacells:compression_card"
+    },
+    "E": {
+      "item": "ae2:engineering_processor"
+    },
+    "L": {
+      "item": "ae2:logic_processor"
+    }
+  },
+  "result": {
+    "item": "megacells:decompression_module",
+    "count": 1
+  }
+}
