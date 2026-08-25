@@ -26,6 +26,7 @@ gui.tooltips.megacells.NotPartitioned=Not Partitioned
 gui.tooltips.megacells.PartitionedFor=Partitioned for: %s
 gui.tooltips.megacells.Quantity=Quantity: %s
 gui.tooltips.megacells.TraceUnits=Trace Units: %s (%s)
+
 item.megacells.accumulation_processor.name=Accumulation Processor
 item.megacells.accumulation_processor_press.name=Inscriber Accumulation Press
 item.megacells.bulk_cell_component.name=MEGA Bulk Storage Component

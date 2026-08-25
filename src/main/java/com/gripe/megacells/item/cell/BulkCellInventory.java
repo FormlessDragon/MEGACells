@@ -6,6 +6,7 @@ import ae2.api.networking.security.IActionSource;
 import ae2.api.stacks.AEItemKey;
 import ae2.api.stacks.AEKey;
 import ae2.api.stacks.KeyCounter;
+import ae2.api.storage.MEStorageChangeListener;
 import ae2.api.storage.cells.CellState;
 import ae2.api.storage.cells.ISaveProvider;
 import ae2.api.storage.cells.StorageCell;
@@ -19,9 +20,12 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class BulkCellInventory implements StorageCell {
     private static final Logger LOGGER = LoggerFactory.getLogger(BulkCellInventory.class);
@@ -47,6 +51,9 @@ public class BulkCellInventory implements StorageCell {
     private List<IPatternDetails> decompressionPatterns;
 
     private boolean isPersisted = true;
+    private final List<ListenerRegistration> listeners = new ArrayList<>();
+    private boolean dispatchingListeners;
+    private boolean listUpdateRequired;
 
     BulkCellInventory(ItemStack stack, ISaveProvider container) {
         this.stack = stack;
@@ -248,6 +255,7 @@ public class BulkCellInventory implements StorageCell {
         BigInteger factor = compressionChain.unitFactor(item);
         BigInteger units = BigInteger.valueOf(amount).multiply(factor);
 
+        Map<AEKey, Long> previous = mode == Actionable.MODULATE ? snapshotAvailableStacks() : null;
         if (mode == Actionable.MODULATE) {
             if (storedItem == null) {
                 storedItem = filterItem;
@@ -256,6 +264,7 @@ public class BulkCellInventory implements StorageCell {
             unitCount = unitCount.add(units);
             saveChanges();
             needsStackUpdate = true;
+            notifyChanges(previous);
         }
 
         return amount;
@@ -280,6 +289,7 @@ public class BulkCellInventory implements StorageCell {
         BigInteger factor = compressionChain.unitFactor(item);
         BigInteger units = BigInteger.valueOf(amount).multiply(factor).min(unitCount);
 
+        Map<AEKey, Long> previous = mode == Actionable.MODULATE ? snapshotAvailableStacks() : null;
         if (mode == Actionable.MODULATE) {
             unitCount = unitCount.subtract(units).max(BigInteger.ZERO);
 
@@ -294,6 +304,7 @@ public class BulkCellInventory implements StorageCell {
 
             saveChanges();
             needsStackUpdate = true;
+            notifyChanges(previous);
         }
 
         return CompressionChain.clamp(units.divide(factor), Long.MAX_VALUE);
@@ -353,10 +364,113 @@ public class BulkCellInventory implements StorageCell {
         decompressionPatterns = null;
         needsStackUpdate = true;
         saveChanges();
+        notifyListUpdate();
     }
 
     public ItemStack getCutoffItem() {
         return hasCompressionChain() ? compressionChain.getItem(compressionCutoff) : ItemStack.EMPTY;
+    }
+
+    @Override
+    public void addListener(MEStorageChangeListener listener, Object verificationToken) {
+        Objects.requireNonNull(listener, "listener");
+        for (ListenerRegistration registration : listeners) {
+            if (registration.listener == listener) {
+                throw new IllegalStateException("The storage listener is already registered.");
+            }
+        }
+        listeners.add(new ListenerRegistration(listener, verificationToken));
+    }
+
+    @Override
+    public void removeListener(MEStorageChangeListener listener) {
+        listeners.removeIf(registration -> registration.listener == listener);
+    }
+
+    private Map<AEKey, Long> snapshotAvailableStacks() {
+        KeyCounter counter = new KeyCounter();
+        getAvailableStacks(counter);
+        Map<AEKey, Long> result = new HashMap<>();
+        for (var entry : counter) {
+            result.put(entry.getKey(), entry.getLongValue());
+        }
+        return result;
+    }
+
+    private void notifyChanges(Map<AEKey, Long> previous) {
+        if (previous == null || listeners.isEmpty()) {
+            return;
+        }
+
+        Map<AEKey, Long> current = snapshotAvailableStacks();
+        Map<AEKey, Long> allKeys = new HashMap<>(previous);
+        allKeys.putAll(current);
+        for (AEKey key : allKeys.keySet()) {
+            long delta = current.getOrDefault(key, 0L) - previous.getOrDefault(key, 0L);
+            if (delta != 0) {
+                notifyStackChange(key, delta);
+            }
+        }
+    }
+
+    private void notifyStackChange(AEKey key, long delta) {
+        if (dispatchingListeners) {
+            listUpdateRequired = true;
+            return;
+        }
+
+        dispatchingListeners = true;
+        try {
+            for (ListenerRegistration registration : new ArrayList<>(listeners)) {
+                if (!listeners.contains(registration) || !registration.listener.isValid(registration.verificationToken)) {
+                    listeners.remove(registration);
+                    continue;
+                }
+                registration.listener.onStackChange(key, delta);
+            }
+        } finally {
+            dispatchingListeners = false;
+        }
+
+        if (listUpdateRequired) {
+            notifyListUpdate();
+        }
+    }
+
+    private void notifyListUpdate() {
+        if (dispatchingListeners) {
+            listUpdateRequired = true;
+            return;
+        }
+
+        listUpdateRequired = true;
+        int remainingPasses = listeners.size() + 1;
+        while (listUpdateRequired && remainingPasses-- > 0) {
+            listUpdateRequired = false;
+            dispatchingListeners = true;
+            try {
+                for (ListenerRegistration registration : new ArrayList<>(listeners)) {
+                    if (!listeners.contains(registration) || !registration.listener.isValid(registration.verificationToken)) {
+                        listeners.remove(registration);
+                        continue;
+                    }
+                    registration.listener.onListUpdate();
+                }
+            } finally {
+                dispatchingListeners = false;
+            }
+        }
+        listUpdateRequired = false;
+    }
+
+    private static final class ListenerRegistration {
+        private final MEStorageChangeListener listener;
+        private final Object verificationToken;
+
+        private ListenerRegistration(MEStorageChangeListener listener, Object verificationToken) {
+            this.listener = listener;
+            this.verificationToken = verificationToken;
+        }
     }
 
     ItemStack getHighestVariant() {

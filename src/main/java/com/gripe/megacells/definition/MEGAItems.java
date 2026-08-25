@@ -132,20 +132,40 @@ public final class MEGAItems {
 
     public static void initUpgrades() {
         for (var cell : CELLS) {
-            Upgrades.add(AEItems.INVERTER_CARD.asItem(), cell.item().asItem(), 1, "gui.tooltips.appliedenergistics2.StorageCells");
-            Upgrades.add(AEItems.EQUAL_DISTRIBUTION_CARD.asItem(), cell.item().asItem(), 1, "gui.tooltips.appliedenergistics2.StorageCells");
-            Upgrades.add(AEItems.VOID_CARD.asItem(), cell.item().asItem(), 1, "gui.tooltips.appliedenergistics2.StorageCells");
+            Upgrades.add(AEItems.INVERTER_CARD.asItem(), cell.item().asItem(), 1, "gui.ae2.StorageCells");
+            Upgrades.add(AEItems.EQUAL_DISTRIBUTION_CARD.asItem(), cell.item().asItem(), 1, "gui.ae2.StorageCells");
+            Upgrades.add(AEItems.STICKY_CARD.item(), cell.item().asItem(), 1, "gui.ae2.StorageCells");
+            Upgrades.add(AEItems.VOID_CARD.asItem(), cell.item().asItem(), 1, "gui.ae2.StorageCells");
 
             if (cell.keyType() == AEKeyType.items()) {
-                Upgrades.add(AEItems.FUZZY_CARD.asItem(), cell.item().asItem(), 1, "gui.tooltips.appliedenergistics2.StorageCells");
+                Upgrades.add(AEItems.FUZZY_CARD.asItem(), cell.item().asItem(), 1, "gui.ae2.StorageCells");
             }
 
             if (cell.portable()) {
-                Upgrades.add(GREATER_ENERGY_CARD.asItem(), cell.item().asItem(), 2, "gui.tooltips.appliedenergistics2.PortableCells");
+                Upgrades.add(AEItems.ENERGY_CARD.item(), cell.item().asItem(), 2, "gui.ae2.PortableCells");
+                Upgrades.add(GREATER_ENERGY_CARD.asItem(), cell.item().asItem(), 2, "gui.ae2.PortableCells");
             }
         }
 
         Upgrades.add(COMPRESSION_CARD.asItem(), BULK_ITEM_CELL.asItem(), 1);
+
+        for (var portableItemCell : List.of(
+                AEItems.PORTABLE_ITEM_CELL1K,
+                AEItems.PORTABLE_ITEM_CELL4K,
+                AEItems.PORTABLE_ITEM_CELL16K,
+                AEItems.PORTABLE_ITEM_CELL64K,
+                AEItems.PORTABLE_ITEM_CELL256K)) {
+            Upgrades.add(GREATER_ENERGY_CARD.asItem(), portableItemCell.asItem(), 2, "gui.ae2.PortableCells");
+        }
+
+        for (var portableFluidCell : List.of(
+                AEItems.PORTABLE_FLUID_CELL1K,
+                AEItems.PORTABLE_FLUID_CELL4K,
+                AEItems.PORTABLE_FLUID_CELL16K,
+                AEItems.PORTABLE_FLUID_CELL64K,
+                AEItems.PORTABLE_FLUID_CELL256K)) {
+            Upgrades.add(GREATER_ENERGY_CARD.asItem(), portableFluidCell.asItem(), 2, "gui.ae2.PortableCells");
+        }
     }
 
     private static StorageTier tier(int index, String namePrefix, ItemDefinition<StorageComponentItem> component) {
