@@ -1,7 +1,6 @@
 package com.gripe.megacells.misc;
 
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
@@ -16,7 +15,6 @@ import ae2.client.gui.style.GuiStyleManager;
 import ae2.core.gui.locator.GuiHostLocators;
 
 import com.gripe.megacells.client.screen.CellDockScreen;
-import com.gripe.megacells.definition.MEGAItems;
 import com.gripe.megacells.item.part.CellDockPart;
 import com.gripe.megacells.menu.CellDockMenu;
 
@@ -51,7 +49,7 @@ public final class MEGAGuiHandler implements IGuiHandler {
     public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
         if (id == CELL_DOCK) {
             CellDockPart dock = locateCellDock(world, x, y, z);
-            return dock == null ? null : new CellDockMenu(player.inventory, dock);
+            return dock == null ? null : createCellDockMenu(player, dock);
         }
 
         return null;
@@ -65,7 +63,7 @@ public final class MEGAGuiHandler implements IGuiHandler {
             if (dock != null) {
                 GuiStyle style = GuiStyleManager.loadStyleDoc("/screens/cell_dock.json");
                 return new CellDockScreen(
-                        new CellDockMenu(player.inventory, dock),
+                        createCellDockMenu(player, dock),
                         player.inventory,
                         new TextComponentTranslation("gui.megacells.cell_dock.name"),
                         style);
@@ -73,6 +71,12 @@ public final class MEGAGuiHandler implements IGuiHandler {
         }
 
         return null;
+    }
+
+    private static CellDockMenu createCellDockMenu(EntityPlayer player, CellDockPart dock) {
+        CellDockMenu menu = new CellDockMenu(player.inventory, dock);
+        menu.setLocator(GuiHostLocators.forPart(dock));
+        return menu;
     }
 
     private static CellDockPart locateCellDock(World world, int encodedX, int y, int z) {

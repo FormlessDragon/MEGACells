@@ -10,7 +10,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketBuffer;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -21,10 +20,19 @@ public class CompressionChain {
     public static final long STACK_LIMIT = (long) Math.pow(2, 42);
 
     private final List<ItemStack> variants;
+    private final UnitAmount[] unitFactors;
+    private final UnitAmount oneFactor = new UnitAmount().init(1);
     private final Supplier<List<Pair<IPatternDetails, IPatternDetails>>> patterns = memoize(this::gatherPatterns);
 
     CompressionChain(List<ItemStack> variants) {
         this.variants = Collections.unmodifiableList(variants);
+        this.unitFactors = new UnitAmount[variants.size()];
+
+        UnitAmount factor = new UnitAmount().init(1);
+        for (int i = 0; i < variants.size(); i++) {
+            factor.multiply(variants.get(i).getCount());
+            unitFactors[i] = new UnitAmount().init(factor);
+        }
     }
 
     public static CompressionChain read(PacketBuffer buffer) throws IOException {
@@ -36,14 +44,6 @@ public class CompressionChain {
         }
 
         return new CompressionChain(variants);
-    }
-
-    public static long clamp(BigInteger toClamp, long limit) {
-        return toClamp.min(BigInteger.valueOf(limit)).longValue();
-    }
-
-    private static BigInteger bigCount(ItemStack stack) {
-        return BigInteger.valueOf(stack.getCount());
     }
 
     static ItemStack copyWithCount(ItemStack stack, int count) {
@@ -93,22 +93,18 @@ public class CompressionChain {
         return variants.get(index).copy();
     }
 
-    public BigInteger unitFactor(AEItemKey item) {
+    public UnitAmount unitFactor(AEItemKey item) {
         if (item == null) {
-            return BigInteger.ONE;
+            return oneFactor;
         }
 
-        BigInteger potentialFactor = BigInteger.ONE;
-
-        for (ItemStack variant : variants) {
-            potentialFactor = potentialFactor.multiply(bigCount(variant));
-
-            if (BulkCellItem.sameItemAndTag(item.getReadOnlyStack(), variant)) {
-                return potentialFactor;
+        for (int i = 0; i < variants.size(); i++) {
+            if (BulkCellItem.sameItemAndTag(item.getReadOnlyStack(), variants.get(i))) {
+                return unitFactors[i];
             }
         }
 
-        return BigInteger.ONE;
+        return oneFactor;
     }
 
     public int size() {
@@ -150,19 +146,21 @@ public class CompressionChain {
         return gatheredPatterns;
     }
 
-    public Map<AEItemKey, Long> initStacks(BigInteger unitCount, int cutoff, AEItemKey fallback) {
+    public Map<AEItemKey, Long> initStacks(UnitAmount unitCount, int cutoff, AEItemKey fallback) {
         Map<AEItemKey, Long> stacks = new Object2LongLinkedOpenHashMap<>();
 
         if (!isEmpty()) {
+            UnitAmount remaining = new UnitAmount().init(unitCount);
+
             for (int i = 0; i < cutoff; i++) {
-                BigInteger factor = bigCount(variants.get((i + 1) % variants.size()));
-                stacks.put(AEItemKey.of(variants.get(i)), unitCount.remainder(factor).longValue());
-                unitCount = unitCount.divide(factor);
+                long factor = variants.get((i + 1) % variants.size()).getCount();
+                stacks.put(AEItemKey.of(variants.get(i)), remaining.remainderToLong(factor, factor - 1));
+                remaining.divide(factor);
             }
 
-            stacks.put(AEItemKey.of(variants.get(cutoff)), clamp(unitCount, STACK_LIMIT));
+            stacks.put(AEItemKey.of(variants.get(cutoff)), remaining.toLongSaturated(STACK_LIMIT));
         } else if (fallback != null) {
-            stacks.put(fallback, clamp(unitCount, STACK_LIMIT));
+            stacks.put(fallback, unitCount.toLongSaturated(STACK_LIMIT));
         }
 
         return stacks;

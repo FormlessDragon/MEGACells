@@ -4,6 +4,7 @@ import ae2.api.implementations.blockentities.IChestOrDrive;
 import ae2.api.inventories.InternalInventory;
 import ae2.api.networking.GridFlags;
 import ae2.api.networking.IGridNodeListener;
+import ae2.api.orientation.BlockOrientation;
 import ae2.api.parts.IPartCollisionHelper;
 import ae2.api.parts.IPartItem;
 import ae2.api.parts.IPartModel;
@@ -13,7 +14,14 @@ import ae2.api.storage.MEStorage;
 import ae2.api.storage.StorageCells;
 import ae2.api.storage.cells.CellState;
 import ae2.api.storage.cells.StorageCell;
+import ae2.block.orientation.SpinMapping;
+import ae2.client.render.BakedModelUnwrapper;
+import ae2.client.render.BlockEntityRenderHelper;
+import ae2.client.render.DelegateBakedModel;
+import ae2.client.render.model.DriveBakedModel;
+import ae2.client.render.tesr.CellLedRenderer;
 import ae2.container.ISubGui;
+import ae2.core.definitions.AEBlocks;
 import ae2.helpers.IPriorityHost;
 import ae2.items.parts.PartModels;
 import ae2.me.storage.DriveWatcher;
@@ -27,6 +35,19 @@ import ae2.util.inv.filter.IAEItemFilter;
 import com.gripe.megacells.MEGACells;
 import com.gripe.megacells.definition.MEGAItems;
 import com.gripe.megacells.misc.MEGAGuiHandler;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.minecraft.block.BlockDirectional;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BlockRendererDispatcher;
+import net.minecraft.client.renderer.BufferBuilder;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.IBakedModel;
+import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -40,9 +61,13 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import org.lwjgl.opengl.GL11;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class CellDockPart extends AEBasePart
@@ -273,8 +298,10 @@ public class CellDockPart extends AEBasePart
 
     @Override
     public void onChangeInventory(AppEngInternalInventory inv, int slot) {
-        cached = false;
-        updateState();
+        if (cached) {
+            cached = false;
+            updateState();
+        }
         IStorageProvider.requestUpdate(getMainNode());
     }
 
@@ -333,6 +360,127 @@ public class CellDockPart extends AEBasePart
     @Override
     public IPartModel getStaticModels() {
         return MODEL;
+    }
+
+    @Override
+    public boolean requireDynamicRender() {
+        return true;
+    }
+
+    @Override
+    public Object getModelData() {
+        return spin;
+    }
+
+    @SideOnly(Side.CLIENT)
+    @Override
+    public void renderDynamic(double x, double y, double z, float partialTicks, int destroyStage) {
+        EnumFacing side = getSide();
+        if (side == null || getLevel() == null) {
+            return;
+        }
+
+        DriveBakedModel driveModel = getDriveModel();
+        if (driveModel == null) {
+            return;
+        }
+
+        EnumFacing front = SpinMapping.getUpFromSpin(side, spin);
+        BlockOrientation chassisOrientation = BlockOrientation.get(front, side);
+        IBakedModel cellModel = new FaceRotatingModel(
+            driveModel.getCellChassisModel(clientCell), chassisOrientation);
+
+        BlockPos pos = getTileEntity().getPos();
+        IBlockState blockState = getLevel().getBlockState(pos);
+        BlockRendererDispatcher dispatcher = Minecraft.getMinecraft().getBlockRendererDispatcher();
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
+
+        Minecraft.getMinecraft().getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+        RenderHelper.disableStandardItemLighting();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GlStateManager.enableBlend();
+        GlStateManager.disableCull();
+
+        if (Minecraft.isAmbientOcclusionEnabled()) {
+            GlStateManager.shadeModel(GL11.GL_SMOOTH);
+        } else {
+            GlStateManager.shadeModel(GL11.GL_FLAT);
+        }
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, z);
+        GlStateManager.translate(0.5F, 0.5F, 0.5F);
+        BlockEntityRenderHelper.applyOrientation(chassisOrientation);
+        GlStateManager.translate(-0.5F, -0.5F, -0.5F);
+        GlStateManager.translate(-3 / 16.0F, 5 / 16.0F, -4 / 16.0F);
+
+        buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
+        buffer.setTranslation(-pos.getX(), -pos.getY(), -pos.getZ());
+        dispatcher.getBlockModelRenderer().renderModel(getLevel(), cellModel, blockState, pos, buffer, false);
+        buffer.setTranslation(0, 0, 0);
+        tessellator.draw();
+
+        GlStateManager.disableTexture2D();
+        GlStateManager.disableLighting();
+        CellLedRenderer.renderLed(this, 0);
+        GlStateManager.enableLighting();
+        GlStateManager.enableTexture2D();
+        GlStateManager.popMatrix();
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(x, y, z);
+        GlStateManager.translate(0.5F, 0.5F, 0.5F);
+        BlockEntityRenderHelper.applyOrientation(BlockOrientation.get(side, spin));
+        GlStateManager.translate(-0.5F, -0.5F, -0.5F);
+        GlStateManager.translate(-8 / 16.0F, -3 / 16.0F, -8 / 16.0F);
+        GlStateManager.disableTexture2D();
+        GlStateManager.disableLighting();
+        CellLedRenderer.renderLed(this, 0);
+        GlStateManager.enableLighting();
+        GlStateManager.enableTexture2D();
+        GlStateManager.popMatrix();
+
+        GlStateManager.enableCull();
+        GlStateManager.disableBlend();
+        RenderHelper.enableStandardItemLighting();
+    }
+
+    @SideOnly(Side.CLIENT)
+    @Nullable
+    private static DriveBakedModel getDriveModel() {
+        IBlockState state = AEBlocks.DRIVE.block().getDefaultState()
+            .withProperty(BlockDirectional.FACING, EnumFacing.NORTH)
+            .withProperty(ae2.api.orientation.IOrientationStrategy.SPIN, 0);
+        IBakedModel model = Minecraft.getMinecraft()
+            .getBlockRendererDispatcher()
+            .getModelForState(state);
+        return BakedModelUnwrapper.unwrap(model, DriveBakedModel.class);
+    }
+
+    @SideOnly(Side.CLIENT)
+    private static final class FaceRotatingModel extends DelegateBakedModel {
+        private final BlockOrientation orientation;
+
+        private FaceRotatingModel(IBakedModel base, BlockOrientation orientation) {
+            super(base);
+            this.orientation = orientation;
+        }
+
+        @Override
+        public List<BakedQuad> getQuads(@Nullable IBlockState state, @Nullable EnumFacing side, long rand) {
+            EnumFacing sourceSide = side == null ? null : orientation.resultingRotate(side);
+            List<BakedQuad> quads = new ObjectArrayList<>(super.getQuads(state, sourceSide, rand));
+
+            for (int i = 0; i < quads.size(); i++) {
+                BakedQuad quad = quads.get(i);
+                EnumFacing rotatedFace = quad.getFace() == null ? null : orientation.rotate(quad.getFace());
+                quads.set(i, new BakedQuad(quad.getVertexData(), quad.getTintIndex(), rotatedFace,
+                    quad.getSprite(), quad.shouldApplyDiffuseLighting(), quad.getFormat()));
+            }
+
+            return quads;
+        }
     }
 
     @Override

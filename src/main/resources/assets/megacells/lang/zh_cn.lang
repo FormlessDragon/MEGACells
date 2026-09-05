@@ -1,4 +1,5 @@
-﻿tile.megacells.16m_crafting_storage.name=16M MEGA合成存储器
+﻿#
+tile.megacells.16m_crafting_storage.name=16M MEGA合成存储器
 tile.megacells.1m_crafting_storage.name=1M MEGA合成存储器
 tile.megacells.256m_crafting_storage.name=256M MEGA合成存储器
 tile.megacells.4m_crafting_storage.name=4M MEGA合成存储器

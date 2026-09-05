@@ -5,6 +5,7 @@ import ae2.api.crafting.IPatternDetails;
 import ae2.api.networking.security.IActionSource;
 import ae2.api.stacks.AEItemKey;
 import ae2.api.stacks.AEKey;
+import ae2.api.stacks.GenericStack;
 import ae2.api.stacks.KeyCounter;
 import ae2.api.storage.MEStorageChangeListener;
 import ae2.api.storage.cells.CellState;
@@ -12,6 +13,7 @@ import ae2.api.storage.cells.ISaveProvider;
 import ae2.api.storage.cells.StorageCell;
 import com.gripe.megacells.misc.CompressionChain;
 import com.gripe.megacells.misc.CompressionService;
+import com.gripe.megacells.misc.UnitAmount;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.text.ITextComponent;
@@ -19,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,12 +39,14 @@ public class BulkCellInventory implements StorageCell {
 
     private final ISaveProvider container;
     private final ItemStack stack;
-    private final AEItemKey filterItem;
+    private AEItemKey filterItem;
     private final boolean compressionEnabled;
     private AEItemKey storedItem;
     private CompressionChain compressionChain;
-    private BigInteger unitCount;
-    private BigInteger unitFactor;
+    private final UnitAmount unitCount = new UnitAmount();
+    private final UnitAmount unitFactor = new UnitAmount();
+    private final UnitAmount scratch = new UnitAmount();
+    private final UnitAmount quantityScratch = new UnitAmount();
     private int compressionCutoff;
 
     private Map<AEItemKey, Long> compressedStacks;
@@ -65,18 +68,19 @@ public class BulkCellInventory implements StorageCell {
 
         NBTTagCompound data = getBulkTag(stack, false);
         storedItem = readItemKey(data);
-        unitCount = readBigInteger(data, TAG_UNIT_COUNT, BigInteger.ZERO);
+        readAmount(data, TAG_UNIT_COUNT, unitCount, 0);
 
         AEItemKey determiningItem = storedItem != null ? storedItem : filterItem;
         compressionChain = CompressionService.getChain(determiningItem);
 
-        unitFactor = compressionChain.unitFactor(determiningItem);
-        BigInteger recordedFactor = readBigInteger(data, TAG_UNIT_FACTOR, unitFactor);
+        unitFactor.init(compressionChain.unitFactor(determiningItem));
+        UnitAmount recordedFactor = new UnitAmount();
+        readAmount(data, TAG_UNIT_FACTOR, recordedFactor, unitFactor);
 
-        if (!unitFactor.equals(recordedFactor) && recordedFactor.signum() > 0) {
-            unitCount = unitCount.multiply(unitFactor).divide(recordedFactor);
-            writeBigInteger(getBulkTag(stack, true), TAG_UNIT_COUNT, unitCount);
-            writeBigInteger(getBulkTag(stack, true), TAG_UNIT_FACTOR, unitFactor);
+        if (!unitFactor.equals(recordedFactor) && recordedFactor.isPositive()) {
+            unitCount.multiply(unitFactor).divide(recordedFactor);
+            writeAmount(getBulkTag(stack, true), TAG_UNIT_COUNT, unitCount);
+            writeAmount(getBulkTag(stack, true), TAG_UNIT_FACTOR, unitFactor);
         }
 
         if (determiningItem == null && data != null) {
@@ -142,28 +146,33 @@ public class BulkCellInventory implements StorageCell {
         return key instanceof AEItemKey ? (AEItemKey) key : null;
     }
 
-    private static BigInteger readBigInteger(@Nullable NBTTagCompound data, String key, BigInteger fallback) {
+    private static void readAmount(@Nullable NBTTagCompound data, String key, UnitAmount target, long fallback) {
+        readAmount(data, key, target, new UnitAmount().init(fallback));
+    }
+
+    private static void readAmount(@Nullable NBTTagCompound data, String key, UnitAmount target, UnitAmount fallback) {
+        target.init(fallback);
+
         if (data == null || !data.hasKey(key, 8)) {
-            return fallback;
+            return;
         }
 
         String value = data.getString(key);
 
         try {
-            return new BigInteger(value);
-        } catch (NumberFormatException e) {
+            target.init(value);
+        } catch (RuntimeException e) {
             LOGGER.warn("Ignoring invalid bulk cell integer tag {}={}", key, value, e);
-            return fallback;
         }
     }
 
-    private static void writeBigInteger(NBTTagCompound data, String key, BigInteger value) {
-        data.setString(key, value.toString());
+    private static void writeAmount(NBTTagCompound data, String key, UnitAmount value) {
+        data.setString(key, value.toDecimalString());
     }
 
     @Override
     public CellState getStatus() {
-        if (storedItem == null || unitCount.signum() < 1) {
+        if (storedItem == null || unitCount.isZero()) {
             return CellState.EMPTY;
         }
 
@@ -179,7 +188,7 @@ public class BulkCellInventory implements StorageCell {
     }
 
     long getStoredQuantity() {
-        return CompressionChain.clamp(unitCount.divide(unitFactor), Long.MAX_VALUE);
+        return quantityScratch.init(unitCount).divide(unitFactor).toLongSaturated(Long.MAX_VALUE);
     }
 
     AEItemKey getFilterItem() {
@@ -201,7 +210,7 @@ public class BulkCellInventory implements StorageCell {
 
         if (compressionChain.containsVariant(filterItem)) {
             storedItem = filterItem;
-            unitFactor = compressionChain.unitFactor(storedItem);
+            unitFactor.init(compressionChain.unitFactor(storedItem));
             saveChanges();
             return false;
         }
@@ -218,7 +227,7 @@ public class BulkCellInventory implements StorageCell {
     }
 
     long getTraceUnits() {
-        return CompressionChain.clamp(unitCount.remainder(unitFactor), Long.MAX_VALUE);
+        return unitCount.remainderToLong(unitFactor, Long.MAX_VALUE);
     }
 
     public List<IPatternDetails> getDecompressionPatterns() {
@@ -240,7 +249,7 @@ public class BulkCellInventory implements StorageCell {
 
     @Override
     public long insert(AEKey what, long amount, Actionable mode, IActionSource source) {
-        if (amount == 0 || !(what instanceof AEItemKey item)) {
+        if (amount <= 0 || !(what instanceof AEItemKey item)) {
             return 0;
         }
 
@@ -248,20 +257,29 @@ public class BulkCellInventory implements StorageCell {
             return 0;
         }
 
-        if (!item.equals(filterItem) && (!compressionEnabled || !compressionChain.containsVariant(item))) {
+        boolean unpartitioned = filterItem == null;
+        if (!unpartitioned && !item.equals(filterItem)
+            && (!compressionEnabled || !compressionChain.containsVariant(item))) {
             return 0;
         }
 
-        BigInteger factor = compressionChain.unitFactor(item);
-        BigInteger units = BigInteger.valueOf(amount).multiply(factor);
+        CompressionChain chain = unpartitioned ? CompressionService.getChain(item) : compressionChain;
+        UnitAmount factor = chain.unitFactor(item);
+        scratch.init(amount).multiply(factor);
 
-        Map<AEKey, Long> previous = mode == Actionable.MODULATE ? snapshotAvailableStacks() : null;
+        Map<AEKey, Long> previous = mode == Actionable.MODULATE && !listeners.isEmpty()
+            ? snapshotAvailableStacks()
+            : null;
         if (mode == Actionable.MODULATE) {
+            if (unpartitioned) {
+                setFilterItem(item, chain, factor);
+            }
+
             if (storedItem == null) {
                 storedItem = filterItem;
             }
 
-            unitCount = unitCount.add(units);
+            unitCount.add(scratch);
             saveChanges();
             needsStackUpdate = true;
             notifyChanges(previous);
@@ -270,9 +288,24 @@ public class BulkCellInventory implements StorageCell {
         return amount;
     }
 
+    private void setFilterItem(AEItemKey item, CompressionChain chain, UnitAmount factor) {
+        if (filterItem != null) {
+            return;
+        }
+
+        BulkCellItem cell = (BulkCellItem) stack.getItem();
+        cell.getConfigInventory(stack).setStack(0, new GenericStack(item, 0));
+        filterItem = item;
+        compressionChain = chain;
+        unitFactor.init(factor);
+        compressionCutoff = Math.max(0, chain.size() - 1);
+        decompressionPatterns = null;
+        needsStackUpdate = true;
+    }
+
     @Override
     public long extract(AEKey what, long amount, Actionable mode, IActionSource source) {
-        if (storedItem == null || unitCount.signum() < 1 || !(what instanceof AEItemKey item)) {
+        if (amount <= 0 || storedItem == null || unitCount.isZero() || !(what instanceof AEItemKey item)) {
             return 0;
         }
 
@@ -286,14 +319,16 @@ public class BulkCellInventory implements StorageCell {
             return 0;
         }
 
-        BigInteger factor = compressionChain.unitFactor(item);
-        BigInteger units = BigInteger.valueOf(amount).multiply(factor).min(unitCount);
+        UnitAmount factor = compressionChain.unitFactor(item);
+        scratch.init(amount).multiply(factor).min(unitCount);
 
-        Map<AEKey, Long> previous = mode == Actionable.MODULATE ? snapshotAvailableStacks() : null;
+        Map<AEKey, Long> previous = mode == Actionable.MODULATE && !listeners.isEmpty()
+            ? snapshotAvailableStacks()
+            : null;
         if (mode == Actionable.MODULATE) {
-            unitCount = unitCount.subtract(units).max(BigInteger.ZERO);
+            unitCount.subtractClamped(scratch);
 
-            if (unitCount.signum() < 1) {
+            if (unitCount.isZero()) {
                 storedItem = null;
                 CompressionChain filterChain = CompressionService.getChain(filterItem);
 
@@ -307,7 +342,7 @@ public class BulkCellInventory implements StorageCell {
             notifyChanges(previous);
         }
 
-        return CompressionChain.clamp(units.divide(factor), Long.MAX_VALUE);
+        return scratch.divide(factor).toLongSaturated(Long.MAX_VALUE);
     }
 
     private void saveChanges() {
@@ -328,14 +363,14 @@ public class BulkCellInventory implements StorageCell {
 
         NBTTagCompound data = getBulkTag(stack, true);
 
-        if (storedItem == null || unitCount.signum() < 1) {
+        if (storedItem == null || unitCount.isZero()) {
             data.removeTag(TAG_ITEM);
             data.removeTag(TAG_UNIT_COUNT);
             data.removeTag(TAG_UNIT_FACTOR);
         } else {
             data.setTag(TAG_ITEM, storedItem.toTagGeneric());
-            writeBigInteger(data, TAG_UNIT_COUNT, unitCount);
-            writeBigInteger(data, TAG_UNIT_FACTOR, unitFactor);
+            writeAmount(data, TAG_UNIT_COUNT, unitCount);
+            writeAmount(data, TAG_UNIT_FACTOR, unitFactor);
         }
 
         if (data.isEmpty()) {
@@ -493,7 +528,7 @@ public class BulkCellInventory implements StorageCell {
             if (compressionEnabled) {
                 compressedStacks.forEach(out::add);
             } else {
-                out.add(storedItem, CompressionChain.clamp(unitCount.divide(unitFactor), CompressionChain.STACK_LIMIT));
+                out.add(storedItem, quantityScratch.init(unitCount).divide(unitFactor).toLongSaturated(CompressionChain.STACK_LIMIT));
 
                 if (isFilterMismatched()) {
                     for (AEItemKey item : compressedStacks.keySet()) {
@@ -516,7 +551,7 @@ public class BulkCellInventory implements StorageCell {
 
     @Override
     public boolean canFitInsideCell() {
-        return filterItem == null && storedItem == null && unitCount.signum() < 1;
+        return filterItem == null && storedItem == null && unitCount.isZero();
     }
 
     @Override
