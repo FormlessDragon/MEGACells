@@ -385,8 +385,9 @@ public class CellDockPart extends AEBasePart
             return;
         }
 
-        EnumFacing front = SpinMapping.getUpFromSpin(side, spin);
-        BlockOrientation chassisOrientation = BlockOrientation.get(front, side);
+        BlockOrientation orientation = BlockOrientation.get(side, spin);
+        BlockOrientation chassisOrientation = BlockOrientation.get(
+            SpinMapping.getUpFromSpin(side, spin), side);
         IBakedModel cellModel = new FaceRotatingModel(
             driveModel.getCellChassisModel(clientCell), chassisOrientation);
 
@@ -412,7 +413,6 @@ public class CellDockPart extends AEBasePart
         GlStateManager.translate(x, y, z);
         GlStateManager.translate(0.5F, 0.5F, 0.5F);
         BlockEntityRenderHelper.applyOrientation(chassisOrientation);
-        GlStateManager.translate(-0.5F, -0.5F, -0.5F);
         GlStateManager.translate(-3 / 16.0F, 5 / 16.0F, -4 / 16.0F);
 
         buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.BLOCK);
@@ -431,8 +431,7 @@ public class CellDockPart extends AEBasePart
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, z);
         GlStateManager.translate(0.5F, 0.5F, 0.5F);
-        BlockEntityRenderHelper.applyOrientation(BlockOrientation.get(side, spin));
-        GlStateManager.translate(-0.5F, -0.5F, -0.5F);
+        BlockEntityRenderHelper.applyOrientation(orientation);
         GlStateManager.translate(-8 / 16.0F, -3 / 16.0F, -8 / 16.0F);
         GlStateManager.disableTexture2D();
         GlStateManager.disableLighting();
