@@ -2,25 +2,39 @@ apply from: 'gradle/scripts/helpers.gradle'
 
 repositories {
     flatDir {
-        dirs('libs') // /libs
+        dirs('lib') // /lib
     }
-    // Other repositories described by default:
-    // CleanroomMC: https://maven.cleanroommc.com
+    maven {
+        name = 'CleanroomMC'
+        url = 'https://maven.cleanroommc.com'
+        content {
+            includeGroup 'mezz'
+        }
+    }
     maven {
         name = 'CurseMaven'
         url = 'https://cursemaven.com'
+        content {
+            includeGroup 'curse.maven'
+        }
     }
     maven {
         name = 'CleanroomCurseMaven'
         url = 'https://curse.cleanroommc.com'
+        content {
+            includeGroup 'curse.maven'
+        }
     }
     maven {
         name = 'Modrinth'
         url = 'https://api.modrinth.com/maven'
+        content {
+            includeGroup 'maven.modrinth'
+        }
     }
     maven {
-        name = "Jitpack"
-        url = uri("https://jitpack.io")
+        name = 'Jitpack'
+        url = 'https://jitpack.io'
     }
     mavenCentral()
     mavenLocal() // Must be last for caching to work
@@ -32,8 +46,8 @@ dependencies {
         compileOnly "com.cleanroommc:lwjglx:1.0.0"
     }
 
-    modImplementation 'mezz:jei:4.31.2'
+    modImplementation 'mezz:jei:4.35.1'
     modImplementation "curse.maven:mouse-tweaks-unofficial-461660:5876158"
-    modImplementation "com.github.FormlessDragon:Applied-Energistics-2-Supergiant:v1.0.12:dev"
+    modImplementation 'com.github.FormlessDragon:Applied-Energistics-2-Supergiant:v1.1.0'
     modCompileOnly "curse.maven:baubles-227083:2518667"
 }

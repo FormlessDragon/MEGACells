@@ -63,11 +63,11 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public class CellDockPart extends AEBasePart
@@ -192,7 +192,9 @@ public class CellDockPart extends AEBasePart
 
     @Override
     public boolean onUseItemOn(ItemStack heldItem, EntityPlayer player, EnumHand hand, Vec3d pos) {
-        if (InteractionUtil.canWrenchRotate(player, heldItem, getTileEntity().getPos())) {
+        BlockPos blockPos = getTileEntity().getPos();
+        IBlockState state = getLevel().getBlockState(blockPos);
+        if (InteractionUtil.canWrenchRotate(player, heldItem, blockPos, state)) {
             if (!isClientSide()) {
                 spin = (byte) ((spin + 1) % 4);
                 getHost().markForSave();

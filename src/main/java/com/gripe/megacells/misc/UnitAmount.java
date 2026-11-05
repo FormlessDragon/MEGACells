@@ -1,6 +1,7 @@
 package com.gripe.megacells.misc;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
+
 import java.math.BigInteger;
 import java.util.Objects;
 
